@@ -16,6 +16,9 @@ if ($Uninstall) {
 }
 
 New-Item -ItemType Directory -Path $extensionsRoot -Force | Out-Null
+if (Test-Path -LiteralPath $destination) {
+  Remove-Item -LiteralPath $destination -Recurse -Force
+}
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
 
 Get-ChildItem -LiteralPath $source -Force |
