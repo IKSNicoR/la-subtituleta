@@ -1,0 +1,234 @@
+:root {
+  color-scheme: dark;
+  --bg: #232322;
+  --surface: #2e2e2d;
+  --surface-strong: #383837;
+  --text: #ffffff;
+  --muted: #b8b8b4;
+  --accent: #03afba;
+  --danger: #f36f64;
+  --border: #5b5b58;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "ITC Franklin Gothic", "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+  font-size: 13px;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.panel-shell {
+  min-width: 280px;
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.panel-header,
+.settings-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1;
+  letter-spacing: 0.055em;
+}
+
+h2 {
+  font-size: 16px;
+}
+
+.panel-content,
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field,
+.compact-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > span,
+.compact-field > span,
+.line-format legend {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+select,
+input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 7px 9px;
+  outline: none;
+}
+
+select:focus,
+input:focus,
+button:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.line-format {
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid var(--border);
+  padding: 13px 12px 12px;
+}
+
+.line-format legend {
+  padding: 0 5px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+button {
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.secondary-button,
+.icon-button,
+.text-button {
+  border-color: var(--border);
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+.icon-button {
+  width: 36px;
+  padding: 0;
+  font-size: 15px;
+}
+
+.text-button {
+  min-height: 28px;
+  padding: 4px 8px;
+}
+
+.status-block {
+  border-top: 1px solid var(--border);
+  padding-top: 13px;
+}
+
+.status-line {
+  display: flex;
+  min-height: 32px;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.status-indicator {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  background: var(--accent);
+}
+
+.status-indicator.is-error {
+  background: var(--danger);
+}
+
+progress {
+  width: 100%;
+  height: 3px;
+  border: 0;
+  background: var(--surface-strong);
+}
+
+progress::-webkit-progress-bar {
+  background: var(--surface-strong);
+}
+
+progress::-webkit-progress-value {
+  background: var(--accent);
+}
+
+.settings-note {
+  margin: -4px 0 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.is-hidden {
+  display: none;
+}
+
+@media (max-width: 310px) {
+  .field-grid,
+  .actions,
+  .line-format {
+    grid-template-columns: 1fr;
+  }
+}

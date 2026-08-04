@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://api.assemblyai.com https://llm-gateway.assemblyai.com https://api.deepgram.com https://asr.api.speechmatics.com;" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Subtitulador</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <main class="panel-shell">
+      <header class="panel-header">
+        <div>
+          <p class="eyebrow">SUBTITULADOR</p>
+          <h1>SUBTÍTULOS</h1>
+        </div>
+        <button id="open-settings" class="icon-button" type="button" aria-label="Configuración" title="Configuración">⚙</button>
+      </header>
+
+      <section id="main-panel" class="panel-content">
+        <label class="field">
+          <span>MODELO</span>
+          <select id="model">
+            <optgroup label="AssemblyAI">
+              <option value="assemblyai:universal-3-5-pro">Universal 3.5 Pro</option>
+              <option value="assemblyai:universal-2">Universal 2 · 99 idiomas</option>
+              <option value="assemblyai:slam-1">Slam-1 · solo inglés</option>
+            </optgroup>
+            <optgroup label="Speechmatics">
+              <option value="speechmatics:enhanced">Enhanced</option>
+              <option value="speechmatics:standard">Standard</option>
+              <option value="speechmatics:melia-1">Melia-1</option>
+            </optgroup>
+            <optgroup label="Deepgram">
+              <option value="deepgram:nova-3">Nova-3</option>
+              <option value="deepgram:nova-2">Nova-2</option>
+              <option value="deepgram:whisper-large">Whisper Large</option>
+            </optgroup>
+          </select>
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>IDIOMA DE ENTRADA</span>
+            <select id="input-language"></select>
+          </label>
+          <label class="field">
+            <span>IDIOMA DE SALIDA</span>
+            <select id="output-language"></select>
+          </label>
+        </div>
+
+        <fieldset class="line-format">
+          <legend>FORMATO DE LÍNEAS</legend>
+          <label class="compact-field">
+            <span>PALABRAS POR LÍNEA</span>
+            <input id="words-per-line" type="number" min="1" max="20" value="6" />
+          </label>
+          <label class="compact-field">
+            <span>LÍNEAS</span>
+            <select id="lines-per-caption">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <div class="actions">
+          <button id="transcribe" class="primary-button" type="button">TRANSCRIBIR</button>
+          <button id="reflow" class="secondary-button" type="button" disabled>REFLOW LINES</button>
+        </div>
+
+        <div class="status-block" aria-live="polite">
+          <div class="status-line">
+            <span id="status-indicator" class="status-indicator"></span>
+            <span id="status">Listo.</span>
+          </div>
+          <progress id="progress" max="100" value="0"></progress>
+        </div>
+      </section>
+
+      <section id="settings-panel" class="settings-panel is-hidden" aria-labelledby="settings-title">
+        <div class="settings-heading">
+          <h2 id="settings-title">CONFIGURACIÓN</h2>
+          <button id="close-settings" class="text-button" type="button">VOLVER</button>
+        </div>
+        <p class="settings-note">Las claves quedan guardadas únicamente en este equipo.</p>
+        <label class="field">
+          <span>ASSEMBLYAI API KEY</span>
+          <input id="assemblyai-key" type="password" autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>SPEECHMATICS API KEY</span>
+          <input id="speechmatics-key" type="password" autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>DEEPGRAM API KEY</span>
+          <input id="deepgram-key" type="password" autocomplete="off" spellcheck="false" />
+        </label>
+        <button id="save-settings" class="primary-button" type="button">GUARDAR</button>
+      </section>
+    </main>
+
+    <script src="js/bridge.js"></script>
+    <script src="js/http.js"></script>
+    <script src="js/transcript.js"></script>
+    <script src="js/providers.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
