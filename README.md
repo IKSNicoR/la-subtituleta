@@ -69,3 +69,7 @@ node --test .\test\transcript.test.js
 ```
 
 La integración final debe verificarse dentro de Premiere con API keys reales, porque prepara el audio de la secuencia y crea una pista de captions usando la API ExtendScript de Premiere.
+
+## Solución de problemas
+
+Si una versión anterior muestra solamente `EvalScript error.`, instalá la última versión y volvé a abrir el panel. Desde la versión 0.1.1 el módulo interno de Premiere se carga explícitamente y los errores indican si falló la exportación del audio o la inserción de captions.
