@@ -91,7 +91,11 @@
     setBusy(true);
     try {
       setStatus("Preparando el audio dentro de Premiere…", 12);
-      await bridge.exportAudio(audioPath, presetPath);
+      try {
+        await bridge.exportAudio(audioPath, presetPath);
+      } catch (error) {
+        throw new Error("Premiere no pudo exportar el audio. " + error.message);
+      }
       options.audioPath = audioPath;
       setStatus("Enviando audio al servicio…", 35);
       lastTranscript = await providers.transcribe(options, function (progress, message) {
@@ -135,7 +139,11 @@
     fs.mkdirSync(folder, { recursive: true });
     var srtPath = path.join(folder, "subtitulos-" + safeTimestamp() + ".srt");
     fs.writeFileSync(srtPath, "\ufeff" + transcriptTools.toSrt(captions), "utf8");
-    await bridge.importCaptions(srtPath);
+    try {
+      await bridge.importCaptions(srtPath);
+    } catch (error) {
+      throw new Error("El SRT se creó, pero Premiere no pudo insertarlo en la línea de tiempo. " + error.message);
+    }
   }
 
   function collectOptions() {
