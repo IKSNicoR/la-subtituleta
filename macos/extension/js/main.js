@@ -11,7 +11,7 @@
   var transcriptLibrary = window.LaSubtituletaLibrary;
   var lastTranscript = null;
   var busy = false;
-  var EXTENSION_VERSION = "0.4.0";
+  var EXTENSION_VERSION = "0.4.0-macos-beta.1";
   var PROVIDER_LABELS = {
     assemblyai: "AssemblyAI",
     speechmatics: "Speechmatics",
@@ -474,8 +474,7 @@
   }
 
   function settingsPath() {
-    var roaming = (typeof process !== "undefined" && process.env && process.env.APPDATA) || path.join(os.homedir(), "AppData", "Roaming");
-    return path.join(roaming, "La Subtituleta", "config.json");
+    return path.join(window.LaSubtituletaPlatform.appDataRoot(), "config.json");
   }
 
   function readSettingsFile() {
@@ -763,8 +762,8 @@
     var folders = [];
     function add(folder) {
       if (!folder) { return; }
-      var normalized = String(folder).replace(/\\/g, "/").toLowerCase();
-      if (!folders.some(function (item) { return String(item).replace(/\\/g, "/").toLowerCase() === normalized; })) {
+      var normalized = window.LaSubtituletaPlatform.fileKey(folder);
+      if (!folders.some(function (item) { return window.LaSubtituletaPlatform.fileKey(item) === normalized; })) {
         folders.push(folder);
       }
     }

@@ -1,0 +1,66 @@
+LA SUBTITULETA — macOS v0.4.0 beta.1
+
+Beta para probar con Premiere Pro 2024 o posterior. Anotá tu versión exacta
+de Premiere y macOS, y si tu Mac es Apple Silicon (M1/M2/M3/...) o Intel.
+La compatibilidad final depende de estas pruebas en Macs reales.
+
+INSTALACIÓN
+1. Cerrá Premiere por completo: Premiere Pro > Salir (Cmd+Q).
+2. Descargá La-Subtituleta-macOS-v0.4.0-beta.zip.
+3. Doble clic al ZIP para descomprimirlo con la utilidad de macOS.
+4. Abrí la carpeta extraída. Doble clic en INSTALAR.command.
+5. Se abre Terminal. Esperá el mensaje "La Subtituleta ... instalada".
+   No requiere contraseña de administrador, sudo, Python ni Node instalados.
+6. Abrí Premiere > Ventana > Extensiones (heredado) > La Subtituleta.
+   En inglés: Window > Extensions (Legacy) > La Subtituleta.
+7. Tocá el engranaje, pegá al menos una API key y pulsá GUARDAR.
+8. Seguí PRUEBAS-BETA.txt y enviá los resultados a Nico.
+
+SI MACOS BLOQUEA EL INSTALADOR
+Esta beta todavía no tiene firma/notarización de Apple.
+Después de intentar abrir INSTALAR.command, entrá en Configuración del Sistema
+> Privacidad y seguridad > Abrir igualmente, si aparece esa opción para el
+archivo de LS que acabás de descargar. En versiones anteriores de macOS puede
+alcanzar con clic derecho sobre INSTALAR.command > Abrir.
+No desactives la seguridad global de la Mac.
+Si sigue bloqueado, enviá el mensaje exacto y tu versión de macOS a Nico.
+
+SI DICE QUE NO TENÉS PERMISOS PARA EJECUTAR EL ARCHIVO
+Abrí Terminal, escribí /bin/bash seguido de un espacio, arrastrá
+INSTALAR.command desde Finder a esa ventana y presioná Enter.
+No escribas la ruta a mano ni uses sudo.
+
+SI LS NO APARECE EN EL MENÚ
+Confirmá que la instalación terminó, cerrá y reabrí Premiere por completo.
+Si persiste, reiniciá la Mac. Si sigue sin aparecer, enviá el mensaje de
+instalación y las versiones de Premiere/macOS a Nico.
+
+API KEYS (alcanza con la del servicio que vayas a usar)
+AssemblyAI: https://www.assemblyai.com/dashboard/api-keys
+Speechmatics: https://portal.speechmatics.com/
+Deepgram: https://console.deepgram.com/
+Creá una cuenta en el proveedor, generá/copíá su API key y pegala en LS.
+Cada cuenta tiene sus propios créditos y condiciones. Transcribir consume
+el saldo de esa cuenta. Reflow reutiliza la transcripción y no llama a la API.
+El audio se envía al servicio elegido. No envíes tus API keys a nadie.
+
+ACTUALIZAR
+Cerrá Premiere y ejecutá INSTALAR.command del nuevo paquete descomprimido.
+Las claves, la biblioteca y los JSON existentes se conservan.
+
+DESINSTALAR
+Cerrá Premiere y ejecutá DESINSTALAR.command.
+Retira LS del menú y conserva claves, memoria y una copia recuperable de la
+extensión en Library/Application Support/La Subtituleta/installation-backups.
+Los SRT y JSON de tus proyectos se conservan.
+
+SI NECESITÁS AYUDA
+Enviá a Nico:
+- Una captura y el texto exacto del error.
+- Modelo de Mac y tipo de chip: Apple Silicon o Intel.
+- Versiones de macOS y Adobe Premiere.
+- Qué estabas intentando hacer y en qué paso falló.
+- Servicio y modelo de transcripción utilizados.
+- El SRT y el JSON generados, si el contenido se puede compartir.
+
+No envíes tu API key ni el archivo config.json.

@@ -1,0 +1,57 @@
+LA SUBTITULETA — PRUEBAS macOS v0.4.0 beta.1
+
+Usá una copia de un proyecto para la prueba. Empezá con 1 o 2 minutos.
+No hace falta que todos prueben los tres servicios: avisá cuál usaste.
+
+1. INSTALAR Y ABRIR
+Seguí INSTRUCCIONES-INSTALACION.txt. Confirmá que abre el panel y configuración.
+
+2. TRANSCRIBIR
+Activá una secuencia corta con diálogo. Elegí tu modelo, español, salida
+"Igual que entrada", 6 palabras por línea y 2 líneas. Pulsá TRANSCRIBIR.
+Elegí una carpeta con Finder. Tiene que preparar audio dentro de Premiere,
+enviarlo, guardar SRT + JSON con el nombre de la secuencia y crear una pista
+de captions en esa misma secuencia. Revisá sincronía al principio y al final.
+No debería abrir Media Encoder. No debería generar CSV.
+
+3. SPEAKERS
+Con material de dos voces, activá RECONOCER SPEAKERS y cargá sus nombres en
+orden de primera aparición. Transcribí. Los nombres no deben figurar en el
+texto visible del SRT. Enviá el JSON para revisar la asignación de voces.
+Esta prueba vuelve a consumir transcripción.
+
+4. REFLOW Y RECORTE VERTICAL
+En la secuencia ya transcripta cambiá a 5 palabras y 1 línea. Pulsá REFLOW LINES.
+Debe crear otra pista con ese formato, sin volver a enviar audio.
+Después llevá 20-30 segundos DEL MEDIO del montaje a una secuencia nueva,
+poné otro nombre y formato 9:16. Activala y repetí Reflow. El contenido debe
+corresponder a ese recorte, sincronizado desde su comienzo hasta su final.
+Ocultá la pista anterior para evaluar solamente la nueva.
+
+5. CAMBIAR START TIME
+En esa secuencia derivada cambiá el timecode de inicio (por ejemplo a 01:00:00:00)
+y repetí Reflow. El texto y la sincronía tienen que seguir coincidiendo con
+los mismos clips, sin desplazarse una hora ni traer el comienzo del original.
+
+6. MEMORIA Y ACTUALIZACIÓN
+Guardá el proyecto, cerrá Premiere por completo y ejecutá INSTALAR.command otra
+vez. Abrí Premiere y el proyecto: las claves deben seguir guardadas. Volvé al
+recorte y repetí Reflow sin transcribir nuevamente.
+Si podés, abrí otro proyecto y volvé al primero antes de hacer Reflow: nunca
+debe usar el texto de otro proyecto.
+
+7. PRUEBA AMPLIADA (después de pasar las anteriores)
+Probá una entrevista de 15-20 minutos; revisá principio, medio y final.
+Si tenés otras API keys, repetí la prueba corta con los otros proveedores.
+Probá guardar en una carpeta con espacios/tildes y en un disco externo.
+Opcional: español > inglés en un modelo que habilite traducción.
+
+QUÉ ENVIAR A NICO
+- Mac: modelo y chip. macOS: versión. Premiere: versión exacta.
+- Build: 0.4.0-macos-beta.1.
+- Modelo de transcripción, duración, FPS y start time de la secuencia.
+- Qué pruebas salieron bien y en cuál falló.
+- Texto exacto del error y captura de LS/Terminal si corresponde.
+- SRT y JSON generados, si podés compartir ese contenido.
+- Para errores de Reflow: segundo donde se desfasa y lo que debería decir.
+No envíes config.json ni capturas que muestren API keys.

@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $source = Split-Path -Parent $MyInvocation.MyCommand.Path
 $extensionsRoot = Join-Path $env:APPDATA 'Adobe\CEP\extensions'
-$destination = Join-Path $extensionsRoot 'com.iksnicor.subtitulador'
+$destination = Join-Path $extensionsRoot 'com.iksnicor.lasubtituleta'
 
 if ($Uninstall) {
   if (Test-Path -LiteralPath $destination) {
@@ -24,7 +24,7 @@ New-Item -ItemType Directory -Path $destination -Force | Out-Null
 Get-ChildItem -LiteralPath $source -Force |
   Where-Object { $_.Name -notin @(
     '.git', '.gitignore', 'test', 'instalar.ps1',
-    'INSTALAR.cmd', 'DESINSTALAR.cmd', 'LICENSE', 'README.md'
+    'INSTALAR.cmd', 'DESINSTALAR.cmd', 'LICENSE', 'README.md', 'dist', 'macos', '.gitattributes'
   ) } |
   Copy-Item -Destination $destination -Recurse -Force
 
@@ -36,4 +36,4 @@ foreach ($debugRoot in $debugRoots) {
 }
 
 Write-Host "Extensión instalada en $destination"
-Write-Host 'Reiniciá Premiere Pro y abrí Ventana > Extensiones (heredado) > Subtitulador.'
+Write-Host 'Reiniciá Premiere Pro y abrí Ventana > Extensiones (heredado) > La Subtituleta.'

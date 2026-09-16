@@ -5,15 +5,7 @@
     if (!root.__adobe_cep__) {
       return "";
     }
-    var extensionPath = decodeURIComponent(root.__adobe_cep__.getSystemPath("extension"))
-      .replace(/^file:\/\/\/?/, "");
-
-    // Some CEP builds expose Windows paths as file:///C:/...
-    // ExtendScript requires C:/..., without the leading slash.
-    if (/^\/[A-Za-z]:/.test(extensionPath)) {
-      extensionPath = extensionPath.substring(1);
-    }
-    return extensionPath;
+    return root.LaSubtituletaPlatform.pathFromCep(root.__adobe_cep__.getSystemPath("extension"));
   }
 
   function invokeHost(method, args) {

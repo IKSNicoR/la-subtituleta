@@ -75,14 +75,17 @@ $._LaSubtituleta._findByMediaPath = function (container, mediaPath) {
   if (!container || !container.children) {
     return null;
   }
-  var expected = String(mediaPath).toLowerCase();
+  var isWindows = /windows/i.test($.os || "");
+  var expected = isWindows ? String(mediaPath).toLowerCase() : String(mediaPath);
   for (var i = 0; i < container.children.numItems; i++) {
     var item = container.children[i];
     if (!item) {
       continue;
     }
     try {
-      if (item.getMediaPath && String(item.getMediaPath()).toLowerCase() === expected) {
+      var actual = item.getMediaPath ? String(item.getMediaPath()) : "";
+      if (isWindows) { actual = actual.toLowerCase(); }
+      if (actual && actual === expected) {
         return item;
       }
     } catch (_error) {}

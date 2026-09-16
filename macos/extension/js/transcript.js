@@ -1,6 +1,8 @@
 (function (root) {
   "use strict";
 
+  var platform = root.LaSubtituletaPlatform || (typeof require === "function" ? require("./platform.js") : null);
+
   var TERMINAL = /[.!?…。！？]$/;
   var NO_SPACE_BEFORE = /^[,.;:!?%)}\]»”’…。、！？：；]$/;
   var CONNECTOR = /^(?:a|al|con|de|del|e|el|en|la|las|lo|los|o|para|pero|por|que|sin|u|un|una|unos|unas|y)$/i;
@@ -380,7 +382,7 @@
   }
 
   function sourceKey(clip) {
-    var mediaPath = String(clip.mediaPath || "").replace(/\\/g, "/").toLowerCase();
+    var mediaPath = platform.fileKey(clip.mediaPath);
     var projectItemId = String(clip.projectItemId || "");
     return projectItemId ? "item:" + projectItemId : (mediaPath ? "media:" + mediaPath : "item:");
   }

@@ -1,0 +1,28 @@
+LA SUBTITULETA 0.4.0 — INSTALACIÓN EN WINDOWS
+
+1. Cerrá Adobe Premiere Pro.
+2. Descomprimí por completo el archivo ZIP.
+3. Abrí la carpeta descomprimida y hacé doble clic en INSTALAR.cmd.
+4. Cuando termine, abrí Premiere.
+5. Entrá en Ventana > Extensiones (heredado) > La Subtituleta.
+6. Tocá el engranaje, pegá al menos una API key y guardá.
+
+API KEYS
+
+AssemblyAI: https://www.assemblyai.com/dashboard/api-keys
+Speechmatics: https://portal.speechmatics.com/
+Deepgram: https://console.deepgram.com/
+
+Cada persona debe crear su propia cuenta. La extensión es gratuita, pero cada
+servicio puede cobrar o limitar minutos según su plan.
+
+ACTUALIZACIONES
+
+Para instalar una versión nueva, cerrá Premiere y volvé a ejecutar INSTALAR.cmd.
+Las API keys y la última transcripción se guardan fuera de la extensión, por lo
+que una actualización normal no las borra.
+
+DESINSTALACIÓN
+
+Cerrá Premiere y ejecutá DESINSTALAR.cmd. La configuración personal se conserva
+para una futura reinstalación.

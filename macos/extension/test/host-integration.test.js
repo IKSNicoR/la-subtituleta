@@ -63,6 +63,7 @@ test("el puente carga host.jsx y ejecuta la operación en una sola evaluación",
     }
   };
   panelWindow.window = panelWindow;
+  panelWindow.LaSubtituletaPlatform = require("../js/platform.js");
   vm.runInNewContext(bridgeSource, {
     window: panelWindow,
     Promise,
