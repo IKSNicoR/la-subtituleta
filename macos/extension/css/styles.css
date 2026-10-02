@@ -303,6 +303,52 @@ progress::-webkit-progress-value {
   display: none !important;
 }
 
+.api-key-link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #23c6d1;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.api-key-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.product-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.product-brand img {
+  display: block;
+  width: 75%;
+  max-width: 360px;
+  height: auto;
+  margin: 3px auto 8px;
+}
+
+.api-key-link:hover,
+.api-key-link:focus {
+  color: #7fe7ed;
+  text-decoration: underline;
+}
+
 @media (max-width: 310px) {
   .field-grid,
   .actions,

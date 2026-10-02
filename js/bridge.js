@@ -70,8 +70,8 @@
     return invokeHost(method, args);
   }
 
-  function exportAudio(outputPath, presetPath) {
-    return evalScript("exportAudio", [outputPath, presetPath]).then(function (result) {
+  function exportAudio(outputPath, presetPath, inToOutOnly) {
+    return evalScript("exportAudio", [outputPath, presetPath, Boolean(inToOutOnly)]).then(function (result) {
       return result.outputPath || outputPath;
     });
   }

@@ -1,11 +1,11 @@
 # La Subtituleta
 
-Extensión gratuita para Adobe Premiere Pro que transcribe la secuencia activa con AssemblyAI, Speechmatics o Deepgram y crea una pista de subtítulos. Cada usuario utiliza su propia API key; el consumo depende de su cuenta en el proveedor.
+Extensión gratuita para Adobe Premiere Pro que transcribe la secuencia activa con AssemblyAI, Speechmatics, Deepgram o ElevenLabs y crea una pista de subtítulos. Cada usuario utiliza su propia API key; el consumo depende de su cuenta en el proveedor.
 
 ## Descargar
 
-- [Windows v0.4.0](https://github.com/IKSNicoR/la-subtituleta/releases/download/v0.4.0/La-Subtituleta-Windows-v0.4.0.zip)
-- [macOS v0.4.0 beta](https://github.com/IKSNicoR/la-subtituleta/releases/download/v0.4.0/La-Subtituleta-macOS-v0.4.0-beta.zip)
+- [Windows v0.6.1 beta](https://github.com/IKSNicoR/la-subtituleta/releases/download/v0.6.1-beta/La-Subtituleta-Windows-v0.6.1-beta.zip)
+- [macOS v0.6.1 beta](https://github.com/IKSNicoR/la-subtituleta/releases/download/v0.6.1-beta/La-Subtituleta-macOS-v0.6.1-beta.zip)
 
 Premiere Pro 2024 o posterior. La versión para macOS está en beta y necesita validación en Macs reales, tanto Intel como Apple Silicon.
 
@@ -34,6 +34,7 @@ Si macOS bloquea el instalador, seguí `INSTRUCCIONES-INSTALACION.txt` dentro de
 - [AssemblyAI](https://dub.sh/assemblyai-yt)
 - [Speechmatics](https://dub.sh/speechm-yt)
 - [Deepgram](https://dub.sh/deepgram-yt)
+- [ElevenLabs](https://elevenlabs.io/app/developers/api-keys)
 
 Creá una cuenta en el servicio elegido y copiá su API key. Alcanza con una. Los créditos y condiciones gratuitos pueden cambiar: revisá el panel del proveedor. El audio se envía al servicio seleccionado. Las claves se guardan localmente en tu computadora; no las compartas.
 

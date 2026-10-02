@@ -1,4 +1,4 @@
-LA SUBTITULETA 0.4.0 — INSTALACIÓN EN WINDOWS
+LA SUBTITULETA 0.6.1 BETA — INSTALACIÓN EN WINDOWS
 
 1. Cerrá Adobe Premiere Pro.
 2. Descomprimí por completo el archivo ZIP.
@@ -12,6 +12,7 @@ API KEYS
 AssemblyAI: https://www.assemblyai.com/dashboard/api-keys
 Speechmatics: https://portal.speechmatics.com/
 Deepgram: https://console.deepgram.com/
+ElevenLabs: https://elevenlabs.io/app/developers/api-keys
 
 Cada persona debe crear su propia cuenta. La extensión es gratuita, pero cada
 servicio puede cobrar o limitar minutos según su plan.

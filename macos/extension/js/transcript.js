@@ -7,7 +7,9 @@
   var NO_SPACE_BEFORE = /^[,.;:!?%)}\]»”’…。、！？：；]$/;
   var CONNECTOR = /^(?:a|al|con|de|del|e|el|en|la|las|lo|los|o|para|pero|por|que|sin|u|un|una|unos|unas|y)$/i;
   var BACKCHANNEL = /^(?:aja|ajá|claro|dale|exacto|mmm|mm|ok|okay|obvio|si|sí|tal|cual|total)$/i;
+  var PROTECTED_ANSWER = /^(?:claro|correcto|exacto|no|obvio|si|sí)$/i;
   var LONG_PAUSE_SECONDS = 1.2;
+  var JUMP_CUT_CLUSTER_GAP = 1.15;
 
   function tokenize(text) {
     return String(text || "").trim().split(/\s+/).filter(Boolean);
@@ -32,15 +34,22 @@
         utteranceId: String(metadata.utteranceId || ""),
         boundaryBefore: Boolean(metadata.boundaryBefore && index === 0),
         boundaryAfter: Boolean(metadata.boundaryAfter && index === tokens.length - 1),
-        sentenceEnd: Boolean(metadata.sentenceEnd && index === tokens.length - 1)
+        sentenceEnd: Boolean(metadata.sentenceEnd && index === tokens.length - 1),
+        timingPrecision: String(metadata.timingPrecision || "segment"),
+        timingSegmentId: String(metadata.timingSegmentId || metadata.utteranceId || ""),
+        timingSegmentStart: Number(start),
+        timingSegmentEnd: Number(end)
       };
     });
   }
 
   function normalizeWords(words) {
     return (words || []).map(function (word) {
+      var text = String(word.text || word.punctuated_word || word.word || word.content || "").trim();
+      var providerSentenceEnd = Boolean(word.sentenceEnd);
+      var derivedSentenceEnd = !providerSentenceEnd && /[.!?][\"”')\]]*$/.test(text);
       return {
-        text: String(word.text || word.punctuated_word || word.word || word.content || "").trim(),
+        text: text,
         start: Number(word.start != null ? word.start : word.start_time || 0),
         end: Number(word.end != null ? word.end : word.end_time || word.start || word.start_time || 0),
         confidence: Number(word.confidence == null ? 1 : word.confidence),
@@ -49,11 +58,22 @@
         utteranceId: String(word.utteranceId || ""),
         boundaryBefore: Boolean(word.boundaryBefore),
         boundaryAfter: Boolean(word.boundaryAfter),
-        sentenceEnd: Boolean(word.sentenceEnd),
+        sentenceEnd: providerSentenceEnd || derivedSentenceEnd,
+        boundarySource: String(word.boundarySource || (providerSentenceEnd ? "provider" : derivedSentenceEnd ? "derived-punctuation" : "")),
         editSegmentId: String(word.editSegmentId || ""),
         sourceKey: String(word.sourceKey || ""),
         sourceStart: word.sourceStart == null ? null : Number(word.sourceStart),
-        sourceEnd: word.sourceEnd == null ? null : Number(word.sourceEnd)
+        sourceEnd: word.sourceEnd == null ? null : Number(word.sourceEnd),
+        timingPrecision: String(word.timingPrecision || "word"),
+        timingSegmentId: String(word.timingSegmentId || ""),
+        timingSegmentStart: word.timingSegmentStart == null ? null : Number(word.timingSegmentStart),
+        timingSegmentEnd: word.timingSegmentEnd == null ? null : Number(word.timingSegmentEnd),
+        punctuationNormalization: String(word.punctuationNormalization || ""),
+        numericNormalization: String(word.numericNormalization || ""),
+        protectedAnswer: Boolean(word.protectedAnswer),
+        removedByCleanup: Boolean(word.removedByCleanup),
+        backchannel: Boolean(word.backchannel),
+        disfluency: Boolean(word.disfluency)
       };
     }).filter(function (word) { return word.text && isFinite(word.start) && isFinite(word.end); });
   }
@@ -66,6 +86,7 @@
         output[output.length - 1].end = Math.max(output[output.length - 1].end, word.end);
         output[output.length - 1].boundaryAfter = Boolean(output[output.length - 1].boundaryAfter || word.boundaryAfter);
         output[output.length - 1].sentenceEnd = Boolean(output[output.length - 1].sentenceEnd || word.sentenceEnd);
+        if (word.sentenceEnd) { output[output.length - 1].boundarySource = word.boundarySource || "provider"; }
       } else {
         output.push(word);
       }
@@ -75,6 +96,110 @@
 
   function cleanToken(value) {
     return String(value || "").toLowerCase().replace(/^[¿¡"'“”‘’([{]+|[,.;:!?…"'“”‘’)}\]]+$/g, "");
+  }
+
+  function uniqueStrings(values) {
+    var seen = {};
+    return (values || []).filter(function (value) {
+      value = String(value || "");
+      if (!value || seen[value]) { return false; }
+      seen[value] = true;
+      return true;
+    });
+  }
+
+  function spanishLanguage(language, words) {
+    var code = String(language || "").toLowerCase();
+    if (/^es(?:[-_]|$)/.test(code)) { return true; }
+    if (code && code !== "auto" && code !== "same") { return false; }
+    var tokens = (words || []).map(function (word) { return cleanToken(word.text); });
+    var signals = tokens.filter(function (token) {
+      return /[áéíóúñü]/.test(token) || /^(?:a|al|como|con|de|del|donde|dónde|el|en|es|la|las|lo|los|no|para|por|que|qué|se|si|sí|un|una|y)$/i.test(token);
+    });
+    return signals.length >= Math.min(2, Math.max(1, Math.ceil(tokens.length / 3)));
+  }
+
+  function addOpeningMark(text, mark) {
+    text = String(text || "");
+    if (!text || text.indexOf(mark) >= 0) { return text; }
+    return text.replace(/^(["'“‘(\[]*)/, "$1" + mark);
+  }
+
+  function normalizeSpanishOpeningMarks(words, language) {
+    var output = normalizeWords(words);
+    var sentenceStart = 0;
+    output.forEach(function (word, index) {
+      var question = /[?？]["'”’)}\]]*$/.test(word.text);
+      var exclamation = /[!！]["'”’)}\]]*$/.test(word.text);
+      if (!question && !exclamation && !TERMINAL.test(word.text)) { return; }
+      var sentence = output.slice(sentenceStart, index + 1);
+      if ((question || exclamation) && spanishLanguage(language, sentence)) {
+        var mark = question ? "¿" : "¡";
+        var alreadyMarked = sentence.some(function (item) { return String(item.text || "").indexOf(mark) >= 0; });
+        if (!alreadyMarked && sentence.length) {
+          sentence[0].text = addOpeningMark(sentence[0].text, mark);
+          sentence[0].punctuationNormalization = question ? "spanish-opening-question" : "spanish-opening-exclamation";
+        }
+      }
+      sentenceStart = index + 1;
+    });
+    return output;
+  }
+
+  function splitTokenPunctuation(value) {
+    var match = String(value || "").match(/^([¿¡"'“‘(\[]*)(.*?)([,.;:!?…"'”’)}\]]*)$/);
+    return match ? { prefix: match[1], core: match[2], suffix: match[3] } : { prefix: "", core: String(value || ""), suffix: "" };
+  }
+
+  function compactDecimalFraction(value) {
+    value = String(value || "");
+    if (!/^\d{5,8}$/.test(value) || !/0{3,}$/.test(value)) { return ""; }
+    var compact = value.replace(/0+$/, "");
+    return compact.length >= 1 && compact.length <= 2 ? compact : "";
+  }
+
+  function normalizeSpanishNumbers(words, language) {
+    var output = normalizeWords(words);
+    if (!spanishLanguage(language, output)) { return output; }
+    var result = [];
+    for (var index = 0; index < output.length; index++) {
+      var word = output[index];
+      var parts = splitTokenPunctuation(word.text);
+      var decimal = parts.core.match(/^(\d{1,3})[.,](\d{5,8})$/);
+      var decimalFraction = decimal && compactDecimalFraction(decimal[2]);
+      if (decimal && decimalFraction) {
+        word.text = parts.prefix + decimal[1] + "," + decimalFraction + " millones" + parts.suffix;
+        word.numericNormalization = "spanish-millions-decimal";
+        result.push(word);
+        continue;
+      }
+      if (/^\d{8,}$/.test(parts.core)) {
+        var amount = Number(parts.core);
+        if (isFinite(amount) && amount >= 10000000 && amount % 1000000 === 0) {
+          word.text = parts.prefix + String(amount / 1000000).replace(".", ",") + " millones" + parts.suffix;
+          word.numericNormalization = "spanish-millions-integer";
+          result.push(word);
+          continue;
+        }
+      }
+      var next = output[index + 1];
+      var third = output[index + 2];
+      var firstInteger = parts.core.match(/^\d{1,3}$/);
+      var thirdParts = third && splitTokenPunctuation(third.text);
+      var spokenFraction = thirdParts && compactDecimalFraction(thirdParts.core);
+      if (firstInteger && next && cleanToken(next.text) === "coma" && spokenFraction) {
+        word.text = parts.prefix + firstInteger[0] + "," + spokenFraction + " millones" + thirdParts.suffix;
+        word.end = Math.max(word.end, third.end);
+        word.boundaryAfter = Boolean(third.boundaryAfter);
+        word.sentenceEnd = Boolean(third.sentenceEnd);
+        word.numericNormalization = "spanish-millions-spoken-decimal";
+        result.push(word);
+        index += 2;
+        continue;
+      }
+      result.push(word);
+    }
+    return result;
   }
 
   function isBackchannelAtEdge(words, index) {
@@ -91,12 +216,16 @@
     return true;
   }
 
-  function cleanBackchannels(words) {
+  function analyzeBackchannels(words, clean) {
     var normalized = normalizeWords(words);
-    return normalized.filter(function (word, index) {
-      if (!isBackchannelAtEdge(normalized, index)) {
-        return true;
+    normalized.forEach(function (word, index) {
+      if (clean && word.disfluency) {
+        word.removedByCleanup = true;
       }
+      if (!isBackchannelAtEdge(normalized, index)) {
+        return;
+      }
+      word.backchannel = true;
       var previous = normalized[index - 1];
       var next = normalized[index + 1];
       var previousSpeaker = String(previous && (previous.speaker || previous.speakerLabel) || "");
@@ -109,8 +238,29 @@
       var attachedAfterSentence = previous && TERMINAL.test(previous.text);
       var speakerChanged = (previousSpeaker && currentSpeaker && previousSpeaker !== currentSpeaker) ||
         (nextSpeaker && currentSpeaker && nextSpeaker !== currentSpeaker) || betweenSameSpeaker;
-      return !(detachedByTiming || attachedAfterSentence || speakerChanged);
+      var token = cleanToken(word.text);
+      var answersQuestion = previous && /[?？]["'”’)}\]]*$/.test(previous.text) &&
+        word.start - previous.end >= -0.12 && word.start - previous.end <= 2;
+      word.protectedAnswer = Boolean(PROTECTED_ANSWER.test(token) && answersQuestion);
+      word.removedByCleanup = Boolean(clean && !word.protectedAnswer &&
+        (detachedByTiming || attachedAfterSentence || speakerChanged));
     });
+    return normalized;
+  }
+
+  function prepareWords(words, options) {
+    options = options || {};
+    var prepared = normalizeSpanishNumbers(words, options.language);
+    prepared = normalizeSpanishOpeningMarks(prepared, options.language);
+    prepared = analyzeBackchannels(prepared, Boolean(options.cleanBackchannels));
+    return prepared;
+  }
+
+  function cleanBackchannels(words, options) {
+    return prepareWords(words, {
+      language: options && options.language,
+      cleanBackchannels: true
+    }).filter(function (word) { return !word.removedByCleanup; });
   }
 
   function captionize(words, options) {
@@ -123,8 +273,11 @@
     var currentGroup = [];
     var hardBoundaries = normalizeBoundaries(options.hardBoundaries);
     var softBoundaries = normalizeBoundaries(options.softBoundaries);
-    var normalized = options.cleanBackchannels ? cleanBackchannels(words) : normalizeWords(words);
+    var prepared = prepareWords(words, { language: options.language, cleanBackchannels: options.cleanBackchannels });
+    var normalized = prepared.filter(function (word) { return !word.removedByCleanup; });
     var capacity = perLine * lineCount;
+    var jumpCutBoundaries = clusteredBoundaries(hardBoundaries, JUMP_CUT_CLUSTER_GAP, 3);
+    var pendingStartReasons = ["start"];
 
     function balancedWrap(items) {
       for (var requestedLines = 1; requestedLines <= lineCount; requestedLines++) {
@@ -145,7 +298,9 @@
           for (var end = maximumEnd; end > position; end--) {
             var line = items.slice(position, end);
             var text = joinWords(line);
-            if (maxChars && text.length > maxChars) { continue; }
+            // The visual line limit wins over the requested word count. A
+            // single long word is kept intact because captions cannot split it.
+            if (maxChars && text.length > maxChars && line.length > 1) { continue; }
             var tail = solve(end, linesLeft - 1);
             if (!tail) { continue; }
             var wordDifference = line.length - targetWords;
@@ -193,7 +348,21 @@
       return cost + boundaryReward(items, nextWord);
     }
 
-    function appendCaption(items, endLimit) {
+    function splitReasons(items, nextWord) {
+      if (!items.length || !nextWord) { return ["balance"]; }
+      var last = items[items.length - 1];
+      var reasons = [];
+      var gap = Math.max(0, nextWord.start - last.end);
+      if (TERMINAL.test(last.text)) { reasons.push("punctuation"); }
+      if (gap >= 0.12) { reasons.push("pause"); }
+      if (isFinite(boundaryBetween(softBoundaries, wordMiddle(last), wordMiddle(nextWord)))) { reasons.push("video-edit"); }
+      if (items.length >= capacity) { reasons.push("format-limit"); }
+      if (maxChars && joinWords(items.concat(nextWord)).length > maxChars * lineCount) { reasons.push("vertical-width"); }
+      if (!reasons.length) { reasons.push("balance"); }
+      return uniqueStrings(reasons);
+    }
+
+    function appendCaption(items, endLimit, beforeReasons, afterReasons) {
       var wrapped = balancedWrap(items);
       if (!wrapped) { return; }
       var captionEnd = Math.max(items[items.length - 1].end, items[0].start + 0.1);
@@ -204,15 +373,22 @@
       captions.push({
         start: items[0].start,
         end: Math.max(captionEnd, items[0].start + 0.04),
-        text: wrapped.map(joinWords).join("\n"),
+        text: visibleCaptionText(wrapped.map(joinWords).join("\n"), options.removePunctuation),
         speaker: items[0].speaker,
         speakerLabel: items[0].speakerLabel,
         confidence: items.length ? confidenceTotal / items.length : 0,
-        words: items.slice()
+        words: items.slice(),
+        segmentation: {
+          before: uniqueStrings(beforeReasons),
+          after: uniqueStrings(afterReasons),
+          crossedJumpCutBoundaries: jumpCutBoundaries.filter(function (boundary) {
+            return boundary > items[0].start + 0.002 && boundary < captionEnd - 0.002;
+          })
+        }
       });
     }
 
-    function flushGroup(endLimit) {
+    function flushGroup(endLimit, finalReasons) {
       if (!currentGroup.length) { return; }
       var count = currentGroup.length;
       var best = new Array(count + 1);
@@ -232,12 +408,17 @@
         best[start] = bestChoice;
       }
       var position = 0;
+      var groupStartReasons = pendingStartReasons;
       while (position < count && best[position]) {
         var next = best[position].next;
-        appendCaption(currentGroup.slice(position, next), next === count ? endLimit : NaN);
+        var items = currentGroup.slice(position, next);
+        var afterReasons = next === count ? (finalReasons || ["end"]) : splitReasons(items, currentGroup[next]);
+        appendCaption(items, next === count ? endLimit : NaN, groupStartReasons, afterReasons);
+        groupStartReasons = afterReasons;
         position = next;
       }
       currentGroup = [];
+      pendingStartReasons = finalReasons || ["end"];
     }
 
     normalized.forEach(function (word) {
@@ -250,21 +431,64 @@
       var providerBoundary = previous && (previous.boundaryAfter || previous.sentenceEnd || word.boundaryBefore ||
         (previous.utteranceId && word.utteranceId && previous.utteranceId !== word.utteranceId));
       var hardBoundary = previous ? boundaryBetween(hardBoundaries, wordMiddle(previous), wordMiddle(word)) : NaN;
+      var hardBoundaryInsideWord = isFinite(hardBoundary) &&
+        ((hardBoundary > previous.start + 0.002 && hardBoundary < previous.end - 0.002) ||
+        (hardBoundary > word.start + 0.002 && hardBoundary < word.end - 0.002));
       var softBoundary = previous ? boundaryBetween(softBoundaries, wordMiddle(previous), wordMiddle(word)) : NaN;
       var naturalBreak = previous && (TERMINAL.test(previous.text) || word.start - previous.end >= 0.12);
       var longPause = previous && word.start - previous.end >= LONG_PAUSE_SECONDS;
-      if (previous && (speakerChanged || providerBoundary || isFinite(hardBoundary) ||
+      var crossesJumpCutCluster = previous && isFinite(hardBoundary) &&
+        canCrossJumpCut(previous, word, hardBoundary, jumpCutBoundaries, providerBoundary, speakerChanged);
+      var boundaryReasons = [];
+      if (speakerChanged) { boundaryReasons.push("speaker"); }
+      if (providerBoundary) { boundaryReasons.push("provider-boundary"); }
+      if (previous && TERMINAL.test(previous.text)) { boundaryReasons.push("punctuation"); }
+      if (isFinite(hardBoundary) && !crossesJumpCutCluster) { boundaryReasons.push("audio-edit"); }
+      if (isFinite(softBoundary) && naturalBreak) { boundaryReasons.push("video-edit"); }
+      if (longPause) { boundaryReasons.push("pause"); }
+      if (crossesJumpCutCluster) {
+        previous.jumpCutBoundariesAfter = (previous.jumpCutBoundariesAfter || []).concat(hardBoundary);
+        word.jumpCutBoundariesBefore = (word.jumpCutBoundariesBefore || []).concat(hardBoundary);
+      }
+      if (previous && (speakerChanged || providerBoundary || (isFinite(hardBoundary) && !crossesJumpCutCluster) ||
         (isFinite(softBoundary) && naturalBreak) || longPause)) {
-        if (isFinite(hardBoundary)) {
+        if (isFinite(hardBoundary) && !crossesJumpCutCluster && !hardBoundaryInsideWord) {
           previous.end = Math.min(previous.end, hardBoundary);
           word.start = Math.max(word.start, hardBoundary);
         }
-        flushGroup(hardBoundary);
+        flushGroup(isFinite(hardBoundary) && !crossesJumpCutCluster && !hardBoundaryInsideWord ? hardBoundary : NaN, uniqueStrings(boundaryReasons));
       }
       currentGroup.push(word);
     });
-    flushGroup();
+    flushGroup(NaN, ["end"]);
     return captions;
+  }
+
+  function clusteredBoundaries(boundaries, maximumGap, minimumCount) {
+    var values = normalizeBoundaries(boundaries);
+    var clustered = [];
+    var group = [];
+    function flush() {
+      if (group.length >= minimumCount) { clustered = clustered.concat(group); }
+      group = [];
+    }
+    values.forEach(function (value) {
+      if (group.length && value - group[group.length - 1] > maximumGap) { flush(); }
+      group.push(value);
+    });
+    flush();
+    return normalizeBoundaries(clustered);
+  }
+
+  function canCrossJumpCut(previous, word, boundary, clustered, providerBoundary, speakerChanged) {
+    if (!isFinite(boundary) || clustered.indexOf(boundary) < 0 || providerBoundary || speakerChanged) { return false; }
+    var previousSpeaker = String(previous.speaker || previous.speakerLabel || "");
+    var currentSpeaker = String(word.speaker || word.speakerLabel || "");
+    if (!previousSpeaker || !currentSpeaker || previousSpeaker !== currentSpeaker) { return false; }
+    if (!previous.sourceKey || !word.sourceKey || previous.sourceKey !== word.sourceKey) { return false; }
+    var gap = Number(word.start) - Number(previous.end);
+    if (gap < -0.12 || gap > 0.12) { return false; }
+    return !TERMINAL.test(previous.text);
   }
 
   function normalizeBoundaries(values) {
@@ -483,10 +707,28 @@
     var sequences = (context && context.sequences) || [];
     var sequence = sequences.filter(function (candidate) { return String(candidate.id) === targetId; })[0];
     if (!sequence) {
-      return { hard: [], soft: [] };
+      return { hard: [], soft: [], seamlessAudio: [] };
     }
     var duration = sequenceDuration(sequence);
-    function segmentEdges(type) {
+    var frameTolerance = Number(sequence.frameRate || 0) > 0 ? 1 / Number(sequence.frameRate) : 0.04;
+    function seamlessEdges(type) {
+      var segments = flattenSequence(context, targetId, [], type).slice().sort(function (a, b) {
+        return Number(a.timelineStart) - Number(b.timelineStart);
+      });
+      var edges = [];
+      for (var index = 1; index < segments.length; index++) {
+        var previous = segments[index - 1];
+        var current = segments[index];
+        var timelineGap = Number(current.timelineStart) - Number(previous.timelineEnd);
+        var sourceGap = Number(current.sourceStart) - Number(previous.sourceEnd);
+        if (previous.sourceKey === current.sourceKey && Math.abs(timelineGap) <= frameTolerance &&
+          Math.abs(sourceGap) <= frameTolerance) {
+          edges.push((Number(previous.timelineEnd) + Number(current.timelineStart)) / 2);
+        }
+      }
+      return normalizeBoundaries(edges);
+    }
+    function segmentEdges(type, ignoredEdges) {
       var edges = [];
       flattenSequence(context, targetId, [], type).forEach(function (segment) {
         [segment.timelineStart, segment.timelineEnd].forEach(function (value) {
@@ -496,11 +738,15 @@
           }
         });
       });
-      return normalizeBoundaries(edges);
+      return normalizeBoundaries(edges).filter(function (edge) {
+        return !isFinite(boundaryBetween(ignoredEdges || [], edge - 0.003, edge + 0.003));
+      });
     }
+    var seamlessAudio = seamlessEdges("audio");
     return {
-      hard: segmentEdges("audio"),
-      soft: segmentEdges("video")
+      hard: segmentEdges("audio", seamlessAudio),
+      soft: segmentEdges("video"),
+      seamlessAudio: seamlessAudio
     };
   }
 
@@ -543,6 +789,15 @@
     });
   }
 
+  function offsetWords(words, seconds) {
+    var offset = Number(seconds || 0);
+    return normalizeWords(words).map(function (word) {
+      word.start += offset;
+      word.end += offset;
+      return word;
+    });
+  }
+
   function inferSourceSequence(words, context, preferredId) {
     var sequences = (context && context.sequences) || [];
     var preferred = sequences.filter(function (sequence) { return String(sequence.id) === String(preferredId || ""); })[0];
@@ -569,7 +824,7 @@
     if (frameHeight > frameWidth) {
       return 28;
     }
-    return 0;
+    return 42;
   }
 
   function mapWordsToSequence(words, context, preferredSourceId) {
@@ -629,7 +884,16 @@
               editSegmentId: target.editSegmentId,
               sourceKey: word.sourceKey,
               sourceStart: word.sourceStart,
-              sourceEnd: word.sourceEnd
+              sourceEnd: word.sourceEnd,
+              timingPrecision: word.timingPrecision,
+              timingSegmentId: word.timingSegmentId,
+              timingSegmentStart: word.timingSegmentStart,
+              timingSegmentEnd: word.timingSegmentEnd,
+              punctuationNormalization: word.punctuationNormalization,
+              numericNormalization: word.numericNormalization,
+              protectedAnswer: word.protectedAnswer,
+              removedByCleanup: word.removedByCleanup,
+              backchannel: word.backchannel
             });
           }
       });
@@ -711,6 +975,63 @@
     }).join("\r\n");
   }
 
+  function visibleCaptionText(text, removePunctuation) {
+    if (!removePunctuation) { return String(text || ""); }
+    return String(text || "").split("\n").map(function (line) {
+      return line.replace(/[.,;:!?¿¡…"“”'’()\[\]{}—–_-]/g, "").replace(/\s+/g, " ").trim();
+    }).filter(Boolean).join("\n");
+  }
+
+  function validateTranscriptCompleteness(data, sequence) {
+    data = data || {};
+    sequence = sequence || {};
+    var expected = Number(sequence.duration || 0);
+    var providerDuration = Number(data.providerMetadata && data.providerMetadata.audioDuration || 0);
+    var words = normalizeWords(data.words || []);
+    var rangeStart = Number(sequence.rangeStart || 0);
+    var transcriptEnd = words.length ? Math.max(0, Number(words[words.length - 1].end || 0) - rangeStart) : 0;
+    var tolerance = Math.max(3, expected * 0.05);
+    var incompleteReason = "";
+
+    if (expected > 3 && !words.length) {
+      incompleteReason = "El servicio no devolvió palabras para el audio enviado.";
+    } else if (expected > 0 && providerDuration > 0 && Math.abs(providerDuration - expected) > tolerance) {
+      incompleteReason = "El audio de Premiere dura " + readableDuration(expected) +
+        " y el servicio procesó " + readableDuration(providerDuration) + ".";
+    } else if (!providerDuration && expected >= 120 && transcriptEnd > 0 && transcriptEnd < Math.max(30, expected * 0.5)) {
+      incompleteReason = "El audio dura " + readableDuration(expected) +
+        " y el texto termina en " + readableDuration(transcriptEnd) + ".";
+    }
+
+    if (incompleteReason) {
+      var error = new Error("La transcripción quedó incompleta: " + incompleteReason + " No se guardaron archivos.");
+      error.code = "INCOMPLETE_TRANSCRIPT";
+      error.validation = {
+        complete: false,
+        expectedAudioDuration: expected,
+        providerAudioDuration: providerDuration,
+        transcriptEnd: transcriptEnd
+      };
+      throw error;
+    }
+
+    return {
+      complete: true,
+      expectedAudioDuration: expected,
+      providerAudioDuration: providerDuration,
+      transcriptEnd: transcriptEnd,
+      checkedAt: new Date().toISOString()
+    };
+  }
+
+  function readableDuration(seconds) {
+    var total = Math.max(0, Math.round(Number(seconds || 0)));
+    var hours = Math.floor(total / 3600);
+    var minutes = Math.floor((total % 3600) / 60);
+    var secs = total % 60;
+    return (hours ? hours + ":" + (minutes < 10 ? "0" : "") : "") + minutes + ":" + (secs < 10 ? "0" : "") + secs;
+  }
+
   function formatTime(seconds) {
     var total = Math.max(0, Math.round(Number(seconds || 0) * 1000));
     var ms = total % 1000;
@@ -749,10 +1070,15 @@
     flattenSequence: flattenSequence,
     timelineEditBoundaries: timelineEditBoundaries,
     anchorWordsToSource: anchorWordsToSource,
+    offsetWords: offsetWords,
     inferSourceSequence: inferSourceSequence,
     mapWordsToSequence: mapWordsToSequence,
     suggestedMaxCharsPerLine: suggestedMaxCharsPerLine,
     normalizeWords: normalizeWords,
+    prepareWords: prepareWords,
+    normalizeSpanishOpeningMarks: normalizeSpanishOpeningMarks,
+    normalizeSpanishNumbers: normalizeSpanishNumbers,
+    analyzeBackchannels: analyzeBackchannels,
     labelSpeakers: labelSpeakers,
     createSpeakerMap: createSpeakerMap,
     applySpeakerMap: applySpeakerMap,
@@ -761,7 +1087,9 @@
     captionize: captionize,
     toSrt: toSrt,
     formatTime: formatTime,
-    joinWords: joinWords
+    joinWords: joinWords,
+    validateTranscriptCompleteness: validateTranscriptCompleteness,
+    visibleCaptionText: visibleCaptionText
   };
 
   if (typeof module !== "undefined" && module.exports) {

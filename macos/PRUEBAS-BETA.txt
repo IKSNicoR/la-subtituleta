@@ -1,4 +1,4 @@
-LA SUBTITULETA — PRUEBAS macOS v0.4.0 beta.1
+LA SUBTITULETA — PRUEBAS macOS v0.6.1 beta
 
 Usá una copia de un proyecto para la prueba. Empezá con 1 o 2 minutos.
 No hace falta que todos prueben los tres servicios: avisá cuál usaste.

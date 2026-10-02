@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://api.assemblyai.com https://llm-gateway.assemblyai.com https://api.deepgram.com https://asr.api.speechmatics.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://api.assemblyai.com https://llm-gateway.assemblyai.com https://api.deepgram.com https://asr.api.speechmatics.com https://api.elevenlabs.io;" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>La Subtituleta</title>
     <link rel="stylesheet" href="css/styles.css" />
@@ -28,19 +28,11 @@
               <option value="deepgram:nova-2">Nova-2</option>
               <option value="deepgram:whisper-large">Whisper Large</option>
             </optgroup>
+            <optgroup label="ElevenLabs">
+              <option value="elevenlabs:scribe_v2">Scribe v2</option>
+            </optgroup>
           </select>
         </label>
-
-        <div class="field-grid">
-          <label class="field">
-            <span>IDIOMA DE ENTRADA</span>
-            <select id="input-language"></select>
-          </label>
-          <label class="field">
-            <span>IDIOMA DE SALIDA</span>
-            <select id="output-language"></select>
-          </label>
-        </div>
 
         <fieldset class="speaker-options">
           <label class="checkbox-field">
@@ -64,6 +56,14 @@
           <p class="speaker-note">Saca muletillas de acompañamiento como claro, ajá, sí u ok cuando quedan pegadas al diálogo principal.</p>
         </fieldset>
 
+        <fieldset class="speaker-options">
+          <label class="checkbox-field">
+            <input id="remove-punctuation" type="checkbox" />
+            <span>QUITAR PUNTUACIÓN VISIBLE</span>
+          </label>
+          <p class="speaker-note">Mantiene puntos y pausas para decidir los cortes, pero no los muestra en los subtítulos.</p>
+        </fieldset>
+
         <fieldset class="line-format">
           <legend>FORMATO DE LÍNEAS</legend>
           <label class="compact-field">
@@ -78,6 +78,24 @@
               <option value="3">3</option>
             </select>
           </label>
+        </fieldset>
+
+        <fieldset class="speaker-options translation-options">
+          <label class="checkbox-field">
+            <input id="translate-output" type="checkbox" />
+            <span>TRADUCIR</span>
+          </label>
+          <div id="translation-languages" class="field-grid is-hidden">
+            <label class="field">
+              <span>IDIOMA DE ENTRADA</span>
+              <select id="input-language"></select>
+            </label>
+            <label class="field">
+              <span>IDIOMA DE SALIDA</span>
+              <select id="output-language" disabled></select>
+            </label>
+          </div>
+          <p id="translation-note" class="speaker-note">Activá esta opción para generar los subtítulos en otro idioma.</p>
         </fieldset>
 
         <div class="actions">
@@ -106,18 +124,27 @@
         </div>
         <p class="settings-note">Las claves quedan guardadas en este equipo y se conservan al actualizar la extensión.</p>
         <label class="field">
-          <span>ASSEMBLYAI API KEY</span>
+          <span class="api-key-heading"><span>ASSEMBLYAI API KEY</span><button class="api-key-link" type="button" data-api-url="https://www.assemblyai.com/dashboard/api-keys">TOCÁ ACÁ PARA SACAR TU API KEY ↗</button></span>
           <input id="assemblyai-key" type="password" autocomplete="off" spellcheck="false" />
         </label>
         <label class="field">
-          <span>SPEECHMATICS API KEY</span>
+          <span class="api-key-heading"><span>SPEECHMATICS API KEY</span><button class="api-key-link" type="button" data-api-url="https://portal.speechmatics.com/">TOCÁ ACÁ PARA SACAR TU API KEY ↗</button></span>
           <input id="speechmatics-key" type="password" autocomplete="off" spellcheck="false" />
         </label>
         <label class="field">
-          <span>DEEPGRAM API KEY</span>
+          <span class="api-key-heading"><span>DEEPGRAM API KEY</span><button class="api-key-link" type="button" data-api-url="https://console.deepgram.com/">TOCÁ ACÁ PARA SACAR TU API KEY ↗</button></span>
           <input id="deepgram-key" type="password" autocomplete="off" spellcheck="false" />
         </label>
+        <label class="field">
+          <span class="api-key-heading"><span>ELEVENLABS API KEY</span><button class="api-key-link" type="button" data-api-url="https://elevenlabs.io/app/settings/api-keys">TOCÁ ACÁ PARA SACAR TU API KEY ↗</button></span>
+          <input id="elevenlabs-key" type="password" autocomplete="off" spellcheck="false" />
+        </label>
         <button id="save-settings" class="primary-button" type="button">GUARDAR</button>
+        <div class="product-brand" aria-label="La Subtituleta">
+          <img src="assets/LS_Logo_web_blanco.svg" alt="La Subtituleta" />
+          <span>de NicoRusso</span>
+          <span>versión <span id="extension-version"></span></span>
+        </div>
       </section>
     </main>
 

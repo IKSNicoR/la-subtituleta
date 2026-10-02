@@ -31,6 +31,15 @@ test("trece palabras en 6x2 se redistribuyen 7 y 6, nunca 12 y 1", () => {
   assert.doesNotMatch(captions[0].text, /\b(?:y|o|de|que)$/i);
 });
 
+test("penaliza captions huérfanos y velocidades de lectura extremas", () => {
+  const words = Array.from({ length: 13 }, (_, index) => ({
+    text: "palabra" + index, start: index * 0.24, end: index * 0.24 + 0.2
+  }));
+  const captions = transcript.captionize(words, { wordsPerLine: 6, lines: 2 });
+  assert.ok(captions.every((caption) => caption.words.length > 1));
+  assert.ok(captions.every((caption) => caption.text.replace(/\n/g, " ").length / (caption.end - caption.start) < 45));
+});
+
 test("una pausa media no deja Y también aislado", () => {
   const captions = transcript.captionize([
     { text: "Y", start: 0, end: 0.2 },
@@ -74,6 +83,23 @@ test("una traducción se distribuye dentro del intervalo original", () => {
   assert.equal(words.length, 4);
   assert.equal(words[0].start, 10);
   assert.equal(words[3].end, 14);
+  assert.equal(words[0].timingPrecision, "segment");
+  assert.equal(words[0].timingSegmentStart, 10);
+  assert.equal(words[3].timingSegmentEnd, 14);
+});
+
+test("la traducción conserva intervalos aproximados y corta al cambiar speaker", () => {
+  const first = transcript.distributeText("Primera respuesta", 10, 12, 0.9, "A", {
+    utteranceId: "translated:1", boundaryBefore: true, boundaryAfter: true
+  });
+  const second = transcript.distributeText("Segunda voz", 12, 14, 0.9, "B", {
+    utteranceId: "translated:2", boundaryBefore: true, boundaryAfter: true
+  });
+  const captions = transcript.captionize(first.concat(second), { wordsPerLine: 6, lines: 2 });
+  assert.equal(captions.length, 2);
+  assert.equal(captions[0].end <= 12, true);
+  assert.equal(captions[1].start >= 12, true);
+  assert.equal(first[0].timingPrecision, "segment");
 });
 
 test("Speechmatics conserva la marca de final de oración al adjuntar puntuación", () => {
@@ -140,13 +166,27 @@ test("con limpieza apagada conserva devoluciones cortas", () => {
   assert.deepEqual(captions.map((caption) => caption.text), ["texto principal.", "Claro."]);
 });
 
+test("limpia palabras marcadas como disfluencia por el proveedor", () => {
+  const clean = transcript.captionize([
+    { text: "Eh", start: 0, end: 0.15, speaker: "A", disfluency: true },
+    { text: "vamos", start: 0.15, end: 0.45, speaker: "A" }
+  ], { wordsPerLine: 6, lines: 2, cleanBackchannels: true });
+  assert.equal(clean[0].text, "vamos");
+
+  const verbatim = transcript.captionize([
+    { text: "Eh", start: 0, end: 0.15, speaker: "A", disfluency: true },
+    { text: "vamos", start: 0.15, end: 0.45, speaker: "A" }
+  ], { wordsPerLine: 6, lines: 2, cleanBackchannels: false });
+  assert.match(verbatim[0].text, /Eh/);
+});
+
 test("los cortes de audio son obligatorios y los de video requieren una pausa natural", () => {
   const hard = transcript.captionize([
     { text: "antes", start: 3.5, end: 4.2 },
     { text: "después", start: 4.3, end: 4.7 }
   ], { wordsPerLine: 8, lines: 2, hardBoundaries: [4] });
   assert.equal(hard.length, 2);
-  assert.equal(hard[0].end, 4);
+  assert.equal(hard[0].end, 4.2);
 
   const softWithPause = transcript.captionize([
     { text: "plano", start: 5.5, end: 5.8 },
@@ -174,7 +214,54 @@ test("extrae por separado los cortes principales de audio y video", () => {
       ]
     }]
   };
-  assert.deepEqual(transcript.timelineEditBoundaries(context), { hard: [4], soft: [6] });
+  assert.deepEqual(transcript.timelineEditBoundaries(context), { hard: [4], soft: [6], seamlessAudio: [] });
+});
+
+test("un corte técnico continuo no deja una palabra huérfana", () => {
+  const context = {
+    activeSequenceId: "edit",
+    sequences: [{
+      id: "edit", duration: 30, frameRate: 24,
+      clips: [
+        { trackType: "audio", trackIndex: 0, start: 0, end: 22.2916667, inPoint: 0, outPoint: 22.2916667, projectItemId: "media-1" },
+        { trackType: "audio", trackIndex: 0, start: 22.2916667, end: 30, inPoint: 22.2916667, outPoint: 30, projectItemId: "media-1" }
+      ]
+    }]
+  };
+  const boundaries = transcript.timelineEditBoundaries(context);
+  assert.deepEqual(boundaries.hard, []);
+  assert.deepEqual(boundaries.seamlessAudio, [22.2916667]);
+  const texts = ["En", "este", "video", "en", "mi", "canal", "de", "YouTube", "me", "ven", "hacerlo."];
+  const words = texts.map((text, index) => ({
+    text, start: 20.26 + index * 0.2, end: 20.44 + index * 0.2, speaker: "A"
+  }));
+  words[10].start = 22.24;
+  words[10].end = 22.64;
+  const captions = transcript.captionize(words, { wordsPerLine: 6, lines: 2, hardBoundaries: boundaries.hard });
+  assert.equal(captions.length, 1);
+  assert.equal(captions[0].text, "En este video en mi canal\nde YouTube me ven hacerlo.");
+});
+
+test("un límite real nunca recorta el tiempo dentro de una palabra", () => {
+  const captions = transcript.captionize([
+    { text: "antes", start: 0, end: 1.2 },
+    { text: "después", start: 1.3, end: 1.8 }
+  ], { wordsPerLine: 6, lines: 1, hardBoundaries: [1] });
+  assert.equal(captions[0].end, 1.2);
+  assert.equal(captions[0].words[0].end, 1.2);
+});
+
+test("doce más una palabras se redistribuyen y una respuesta intencional queda sola", () => {
+  const words = Array.from({ length: 13 }, (_, index) => ({
+    text: "p" + index, start: index * 0.2, end: index * 0.2 + 0.18, speaker: "A"
+  }));
+  const captions = transcript.captionize(words, { wordsPerLine: 6, lines: 2 });
+  assert.ok(captions.every((caption) => caption.words.length > 1));
+  const answer = transcript.captionize([
+    { text: "¿Seguro?", start: 0, end: 0.5, speaker: "A" },
+    { text: "No.", start: 0.6, end: 0.9, speaker: "B", boundaryBefore: true }
+  ], { wordsPerLine: 6, lines: 2 });
+  assert.equal(answer.at(-1).text, "No.");
 });
 
 test("en vertical redistribuye los in-out para evitar líneas visualmente envueltas", () => {
@@ -203,6 +290,25 @@ test("en vertical redistribuye los in-out para evitar líneas visualmente envuel
       assert.ok(line.length <= 28);
     });
   });
+});
+
+test("el límite visual de una línea prevalece sobre la cantidad de palabras", () => {
+  const words = transcript.distributeText(
+    "internacionalización audiovisual requiere decisiones editoriales precisas",
+    0, 4, 1
+  );
+  const captions = transcript.captionize(words, {
+    wordsPerLine: 6,
+    lines: 1,
+    maxCharsPerLine: 28
+  });
+  assert.ok(captions.length > 1);
+  captions.forEach((caption) => {
+    assert.doesNotMatch(caption.text, /\n/);
+    assert.ok(caption.text.length <= 28 || transcript.tokenize(caption.text).length === 1);
+    assert.ok(transcript.tokenize(caption.text).length <= 6);
+  });
+  assert.equal(transcript.suggestedMaxCharsPerLine(1920, 1080), 42);
 });
 
 test("reflow desde SRT conserva el rango del corte y respeta una sola línea", () => {
@@ -298,6 +404,20 @@ test("las palabras quedan ancladas al archivo fuente y sobreviven cambios poster
   assert.equal(anchored[0].sourceStart, 265);
   assert.deepEqual(mapped.words.map((word) => word.text), ["estable"]);
   assert.equal(mapped.words[0].start, 5);
+});
+
+test("un transcript parcial conserva el offset del In y se ancla al material correcto", () => {
+  const context = {
+    activeSequenceId: "original",
+    sequences: [{
+      id: "original", duration: 120,
+      clips: [{ trackType: "audio", trackIndex: 0, start: 0, end: 120, inPoint: 500, outPoint: 620, projectItemId: "media-1" }]
+    }]
+  };
+  const shifted = transcript.offsetWords([{ text: "parcial", start: 0.5, end: 0.9 }], 60);
+  const anchored = transcript.anchorWordsToSource(shifted, context, "original");
+  assert.equal(anchored[0].start, 60.5);
+  assert.equal(anchored[0].sourceStart, 560.5);
 });
 
 test("reflow automático sigue secuencias anidadas como las creadas al pasar a 9x16", () => {
@@ -396,4 +516,67 @@ test("sin nombres usa Speaker 1, Speaker 2", () => {
     { text: "Dos", start: 0.3, end: 0.5, speaker: 1 }
   ], []);
   assert.deepEqual(words.map((word) => word.speakerLabel), ["Speaker 1", "Speaker 2"]);
+});
+
+test("bloquea una corrida cuando el proveedor procesó menos audio", () => {
+  assert.throws(() => transcript.validateTranscriptCompleteness({
+    providerMetadata: { audioDuration: 149 },
+    words: [{ text: "cortado", start: 148, end: 149 }]
+  }, { duration: 2952 }), /No se guardaron archivos/);
+});
+
+test("bloquea una corrida vacía y acepta una duración completa", () => {
+  assert.throws(() => transcript.validateTranscriptCompleteness({ words: [] }, { duration: 90 }), /no devolvió palabras/i);
+  const validation = transcript.validateTranscriptCompleteness({
+    providerMetadata: { audioDuration: 90 },
+    words: [{ text: "final", start: 88, end: 89 }]
+  }, { duration: 90 });
+  assert.equal(validation.complete, true);
+  assert.equal(validation.providerAudioDuration, 90);
+});
+
+test("quita puntuación visible después de usarla para segmentar", () => {
+  const captions = transcript.captionize([
+    { text: "Hola,", start: 0, end: 0.4 }, { text: "¿cómo", start: 0.4, end: 0.8 },
+    { text: "estás?", start: 0.8, end: 1.2 }, { text: "Bien.", start: 1.3, end: 1.7 }
+  ], { wordsPerLine: 6, lines: 2, removePunctuation: true });
+  assert.doesNotMatch(captions.map((caption) => caption.text).join(" "), /[,.?¿]/);
+  assert.equal(captions.flatMap((caption) => caption.words).some((item) => /[,.?¿]/.test(item.text)), true);
+});
+
+test("deriva finales de oración de puntuación sin pisar límites del proveedor", () => {
+  const words = transcript.normalizeWords([
+    { text: "Hola.", start: 0, end: 0.3 },
+    { text: "Sí", start: 0.4, end: 0.6, sentenceEnd: true, boundarySource: "provider-eos" }
+  ]);
+  assert.equal(words[0].sentenceEnd, true);
+  assert.equal(words[0].boundarySource, "derived-punctuation");
+  assert.equal(words[1].boundarySource, "provider-eos");
+});
+
+test("protege respuestas cortas, corrige signos españoles y normaliza millones", () => {
+  const protectedWords = transcript.prepareWords([
+    { text: "¿Venís?", start: 0, end: 0.5, speaker: "A" },
+    { text: "Sí.", start: 0.6, end: 0.9, speaker: "B" }
+  ], { language: "es", cleanBackchannels: true });
+  assert.equal(protectedWords[1].protectedAnswer, true);
+  assert.equal(protectedWords[1].removedByCleanup, false);
+  const question = transcript.normalizeSpanishOpeningMarks([
+    { text: "Como", start: 0, end: 0.2 }, { text: "estas?", start: 0.2, end: 0.5 }
+  ], "es");
+  assert.equal(question[0].text, "¿Como");
+  const amount = transcript.normalizeSpanishNumbers([{ text: "15000000", start: 0, end: 0.5 }], "es");
+  assert.equal(amount[0].text, "15 millones");
+});
+
+test("un grupo de jump cuts no fragmenta una misma frase del mismo archivo", () => {
+  const words = Array.from({ length: 8 }, (_, index) => ({
+    text: "p" + index, start: index * 0.5, end: index * 0.5 + 0.4,
+    speaker: "A", sourceKey: "media:entrevista.mp4"
+  }));
+  const captions = transcript.captionize(words, {
+    wordsPerLine: 10, lines: 1, hardBoundaries: [0.45, 0.95, 1.45]
+  });
+  assert.equal(captions.length, 1);
+  assert.equal(captions[0].segmentation.crossedJumpCutBoundaries.length, 3);
 });

@@ -17,6 +17,8 @@
       request = speechmatics(options, model, onProgress);
     } else if (provider === "deepgram") {
       request = deepgram(options, model, onProgress);
+    } else if (provider === "elevenlabs") {
+      request = elevenLabs(options, model, onProgress);
     } else {
       return Promise.reject(new Error("Modelo no reconocido."));
     }
@@ -40,6 +42,9 @@
       audio_url: uploadData.upload_url,
       speech_models: assemblySpeechModels(model)
     };
+    if (options.cleanBackchannels) {
+      payload.disfluencies = false;
+    }
     if (options.inputLanguage === "auto") {
       payload.language_detection = true;
     } else {
@@ -102,7 +107,16 @@
     return normalizedResult(options, words, result.language_code || options.inputLanguage, {
       provider: "assemblyai",
       jobId: submitted.id,
-      audioDuration: Number(result.audio_duration || 0)
+      audioDuration: Number(result.audio_duration || 0),
+      requestParameters: {
+        speech_models: payload.speech_models,
+        language_detection: Boolean(payload.language_detection),
+        language_code: payload.language_code || null,
+        speaker_labels: Boolean(payload.speaker_labels),
+        disfluencies: payload.disfluencies,
+        speakers_expected: payload.speakers_expected || null,
+        speech_understanding: payload.speech_understanding || null
+      }
     });
   }
 
@@ -189,6 +203,9 @@
       punctuate: "true",
       utterances: "true"
     });
+    if (options.cleanBackchannels) {
+      params.set("filler_words", "false");
+    }
     if (options.inputLanguage === "auto") {
       params.set("detect_language", "true");
     } else {
@@ -244,7 +261,8 @@
     return normalizedResult(options, words, detected, {
       provider: "deepgram",
       requestId: data.metadata && data.metadata.request_id,
-      audioDuration: Number(data.metadata && data.metadata.duration || 0)
+      audioDuration: Number(data.metadata && data.metadata.duration || 0),
+      requestParameters: queryParameters(params)
     });
   }
 
@@ -295,7 +313,8 @@
     return normalizedResult(options, words, language || options.inputLanguage, {
       provider: "speechmatics",
       jobId: submitted.id,
-      audioDuration: Number(result.metadata && result.metadata.duration || 0)
+      audioDuration: Number(result.metadata && result.metadata.duration || 0),
+      requestParameters: config
     });
   }
 
@@ -319,7 +338,8 @@
         speaker: alternative.speaker == null ? item.speaker : alternative.speaker,
         boundaryBefore: pendingBoundary,
         boundaryAfter: Boolean(item.is_eos),
-        sentenceEnd: Boolean(item.is_eos)
+        sentenceEnd: Boolean(item.is_eos),
+        disfluency: Array.isArray(alternative.tags) && alternative.tags.indexOf("disfluency") >= 0
       });
       pendingBoundary = false;
     });
@@ -376,6 +396,62 @@
       providerMetadata: providerMetadata || {},
       words: normalized
     };
+  }
+
+  async function elevenLabs(options, model, onProgress) {
+    var key = requiredKey(options.keys.elevenlabs, "ElevenLabs");
+    if (isTranslation(options)) {
+      throw new Error("ElevenLabs no ofrece traducción en esta integración. Elegí Igual que entrada u otro proveedor.");
+    }
+    var fields = {
+      model_id: model || "scribe_v2",
+      timestamps_granularity: "word",
+      tag_audio_events: "false",
+      diarize: options.identifySpeakers ? "true" : "false"
+    };
+    if (options.cleanBackchannels) {
+      fields.no_verbatim = "true";
+    }
+    if (options.inputLanguage !== "auto") { fields.language_code = options.inputLanguage; }
+    if (options.identifySpeakers && Number(options.speakerCount) > 1) {
+      fields.num_speakers = String(Number(options.speakerCount));
+    }
+    onProgress(48, "Transcribiendo con ElevenLabs…");
+    var result = await http.multipart("https://api.elevenlabs.io/v1/speech-to-text", {
+      method: "POST",
+      headers: { "xi-api-key": key },
+      timeout: 600000
+    }, fields, {
+      fieldName: "file",
+      filename: path.basename(options.audioPath),
+      contentType: mimeFor(options.audioPath),
+      data: fs.readFileSync(options.audioPath)
+    });
+    var words = (result.words || []).filter(function (word) {
+      return word.type === "word" && word.text && isFinite(Number(word.start)) && isFinite(Number(word.end));
+    }).map(function (word) {
+      var probability = Math.exp(Number(word.logprob == null ? 0 : word.logprob));
+      return {
+        text: word.text,
+        start: Number(word.start),
+        end: Number(word.end),
+        confidence: Math.max(0, Math.min(1, probability)),
+        speaker: word.speaker_id == null ? "" : String(word.speaker_id)
+      };
+    });
+    var duration = words.length ? words[words.length - 1].end : 0;
+    return normalizedResult(options, words, result.language_code || options.inputLanguage, {
+      provider: "elevenlabs",
+      audioDuration: duration,
+      languageProbability: result.language_probability,
+      requestParameters: fields
+    });
+  }
+
+  function queryParameters(params) {
+    var output = {};
+    params.forEach(function (value, key) { output[key] = value; });
+    return output;
   }
 
   function isTranslation(options) {

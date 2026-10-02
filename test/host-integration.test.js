@@ -14,6 +14,8 @@ const indexSource = fs.readFileSync(path.join(__dirname, "..", "index.html"), "u
 
 test("el audio se exporta dentro de Premiere sin lanzar Media Encoder", () => {
   assert.match(hostSource, /exportAsMediaDirect\(/);
+  assert.match(hostSource, /inToOutOnly \? 1 : 0/);
+  assert.match(bridgeSource, /Boolean\(inToOutOnly\)/);
   assert.doesNotMatch(hostSource, /app\.encoder/);
   assert.doesNotMatch(hostSource, /launchEncoder\(/);
 });

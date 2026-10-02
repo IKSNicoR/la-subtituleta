@@ -42,7 +42,7 @@ $._LaSubtituleta._result = function (value) {
   return $._LaSubtituleta._stringify(value);
 };
 
-$._LaSubtituleta.exportAudio = function (outputPath, presetPath) {
+$._LaSubtituleta.exportAudio = function (outputPath, presetPath, inToOutOnly) {
   try {
     var sequence = app.project.activeSequence;
     if (!sequence) {
@@ -60,12 +60,13 @@ $._LaSubtituleta.exportAudio = function (outputPath, presetPath) {
 
     // Render inside Premiere without launching an external encoder process
     // or waiting on a separate job queue.
-    var exported = sequence.exportAsMediaDirect(output.fsName, preset.fsName, 0);
+    // Work-area type 1 exports only the active sequence In/Out.
+    var exported = sequence.exportAsMediaDirect(output.fsName, preset.fsName, inToOutOnly ? 1 : 0);
     output = new File(outputPath);
     if (!exported || !output.exists || output.length < 1) {
       return $._LaSubtituleta._result({ ok: false, error: "Premiere no pudo preparar el audio de la secuencia." });
     }
-    return $._LaSubtituleta._result({ ok: true, outputPath: output.fsName });
+    return $._LaSubtituleta._result({ ok: true, outputPath: output.fsName, inToOutOnly: Boolean(inToOutOnly) });
   } catch (error) {
     return $._LaSubtituleta._result({ ok: false, error: String(error) });
   }

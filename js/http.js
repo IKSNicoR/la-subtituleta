@@ -4,7 +4,39 @@
   var https = require("https");
   var URLCtor = require("url").URL;
 
+  var TRANSIENT_NETWORK_CODES = {
+    ECONNRESET: true,
+    ETIMEDOUT: true,
+    EAI_AGAIN: true,
+    ENETDOWN: true,
+    ENETUNREACH: true,
+    EPIPE: true
+  };
+
   function request(urlValue, options, body) {
+    options = options || {};
+    var method = String(options.method || "GET").toUpperCase();
+    var retries = options.retries == null ? ((method === "GET" || method === "HEAD") ? 2 : 0) : Math.max(0, Number(options.retries) || 0);
+    var retryDelayMs = options.retryDelayMs == null ? 350 : Math.max(0, Number(options.retryDelayMs) || 0);
+    var attempt = 0;
+
+    function run() {
+      return requestOnce(urlValue, options, body).catch(function (error) {
+        if (!isTransientNetworkError(error) || attempt >= retries) {
+          if (isTransientNetworkError(error)) {
+            error.message = "La conexión con la API se interrumpió después de " + (attempt + 1) + " intentos. " + friendlyNetworkDetail(error);
+          }
+          throw error;
+        }
+        attempt++;
+        return wait(Math.min(2000, retryDelayMs * Math.pow(2, attempt - 1))).then(run);
+      });
+    }
+
+    return run();
+  }
+
+  function requestOnce(urlValue, options, body) {
     return new Promise(function (resolve, reject) {
       var url = new URLCtor(urlValue);
       var headers = Object.assign({}, (options && options.headers) || {});
@@ -17,7 +49,7 @@
         hostname: url.hostname,
         port: url.port || 443,
         path: url.pathname + url.search,
-        method: (options && options.method) || "GET",
+        method: options.method || "GET",
         headers: headers,
         timeout: (options && options.timeout) || 120000
       }, function (res) {
@@ -50,6 +82,24 @@
       }
       req.end();
     });
+  }
+
+  function isTransientNetworkError(error) {
+    var code = String(error && error.code || "").toUpperCase();
+    var message = String(error && error.message || "").toLowerCase();
+    return Boolean(TRANSIENT_NETWORK_CODES[code]) || /econnreset|socket hang up|network.*(?:reset|unreachable)|timed?\s*out|temporary.*dns/.test(message);
+  }
+
+  function friendlyNetworkDetail(error) {
+    var code = String(error && error.code || "").toUpperCase();
+    if (code === "ECONNRESET" || /econnreset|socket hang up/i.test(String(error && error.message || ""))) {
+      return "El servicio cerró la conexión; revisá internet y volvé a intentar.";
+    }
+    return "Revisá internet y volvé a intentar.";
+  }
+
+  function wait(milliseconds) {
+    return new Promise(function (resolve) { setTimeout(resolve, milliseconds); });
   }
 
   function json(url, options, value) {
@@ -94,6 +144,7 @@
   root.LaSubtituletaHttp = {
     request: request,
     json: json,
-    multipart: multipart
+    multipart: multipart,
+    isTransientNetworkError: isTransientNetworkError
   };
 })(window);

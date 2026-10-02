@@ -11,11 +11,12 @@
   var transcriptLibrary = window.LaSubtituletaLibrary;
   var lastTranscript = null;
   var busy = false;
-  var EXTENSION_VERSION = "0.4.0-macos-beta.1";
+  var EXTENSION_VERSION = "0.6.1-macos-beta";
   var PROVIDER_LABELS = {
     assemblyai: "AssemblyAI",
     speechmatics: "Speechmatics",
     deepgram: "Deepgram"
+    , elevenlabs: "ElevenLabs"
   };
 
   var LANGUAGES = [
@@ -30,6 +31,7 @@
   document.addEventListener("DOMContentLoaded", init);
 
   function init() {
+    byId("extension-version").textContent = EXTENSION_VERSION;
     fillLanguages();
     loadSettings();
     bindUI();
@@ -44,13 +46,30 @@
     byId("save-settings").addEventListener("click", saveSettings);
     byId("model").addEventListener("change", updateLanguageRules);
     byId("input-language").addEventListener("change", updateLanguageRules);
+    byId("translate-output").addEventListener("change", function () {
+      savePreferences();
+      updateLanguageRules();
+    });
     byId("identify-speakers").addEventListener("change", updateSpeakerControls);
     byId("clean-backchannels").addEventListener("change", savePreferences);
+    byId("remove-punctuation").addEventListener("change", savePreferences);
     byId("add-speaker").addEventListener("click", function () { addSpeakerRow(); });
     byId("transcribe").addEventListener("click", runTranscription);
     byId("reflow").addEventListener("click", runReflow);
     byId("switch-provider").addEventListener("click", switchProvider);
     byId("dismiss-credit").addEventListener("click", dismissCreditOffer);
+    Array.prototype.slice.call(document.querySelectorAll(".api-key-link")).forEach(function (button) {
+      button.addEventListener("click", function () { openExternalUrl(button.dataset.apiUrl); });
+    });
+  }
+
+  function openExternalUrl(url) {
+    if (!/^https:\/\//i.test(String(url || ""))) { return; }
+    if (window.cep && window.cep.util && typeof window.cep.util.openURLInDefaultBrowser === "function") {
+      window.cep.util.openURLInDefaultBrowser(url);
+      return;
+    }
+    window.open(url, "_blank");
   }
 
   function updateSpeakerControls() {
@@ -79,19 +98,34 @@
     var model = byId("model").value;
     var input = byId("input-language");
     var output = byId("output-language");
+    var translate = byId("translate-output");
+    var languageFields = byId("translation-languages");
+    var note = byId("translation-note");
+    var supportsTranslation = model.indexOf("assemblyai:") === 0 || model.indexOf("speechmatics:") === 0;
     if (model === "assemblyai:slam-1") {
       input.value = "en";
     }
     input.disabled = model === "assemblyai:slam-1";
-    if (model.indexOf("deepgram:") === 0) {
+    translate.disabled = !supportsTranslation;
+    languageFields.classList.toggle("is-hidden", !supportsTranslation || !translate.checked);
+    if (!supportsTranslation) {
+      translate.checked = false;
       output.value = "same";
       output.disabled = true;
       output.options[0].textContent = "Igual que entrada — este modelo no traduce. Cambiá el modelo para hacerlo";
-      output.title = "Deepgram no ofrece traducción.";
+      output.title = "Este modelo no ofrece traducción.";
+      note.textContent = "Este modelo no traduce. Cambiá el modelo para hacerlo.";
+    } else if (!translate.checked) {
+      output.value = "same";
+      output.disabled = true;
+      output.options[0].textContent = "Igual que entrada";
+      output.title = "Activá TRADUCIR para elegir otro idioma.";
+      note.textContent = "Activá esta opción para generar los subtítulos en otro idioma.";
     } else {
       output.disabled = false;
       output.options[0].textContent = "Igual que entrada";
       output.title = "";
+      note.textContent = "Elegí el idioma al que querés traducir los subtítulos.";
     }
   }
 
@@ -125,16 +159,23 @@
 
     var audioPath = path.join(os.tmpdir(), "la-subtituleta-premiere-" + Date.now() + ".mp3");
     var presetPath = path.join(bridge.getExtensionPath(), "presets", "La Subtituleta Audio MP3 128kbps.epr");
+    var runStartedAt = new Date().toISOString();
     setBusy(true);
     try {
       var sourceTimelineContext = await bridge.getTimelineContext();
       var sourceContext = (sourceTimelineContext.sequences || []).filter(function (sequence) {
         return String(sequence.id) === String(sourceTimelineContext.activeSequenceId);
       })[0] || {};
+      var selectedRange = transcriptionRange(sourceContext);
+      var previousSource = findPreviousSource(sourceTimelineContext, sourceContext.id);
+      var sourceChange = describeSourceChange(sourceContext, previousSource);
       options.outputBaseName = uniqueOutputBase(selectedFolder, safeFileName(sourceContext.name || "secuencia"));
-      setStatus("Preparando el audio dentro de Premiere…", 12);
+      setStatus((sourceChange.changed ? "Atención: " + sourceChange.message + ". " : "") +
+        "Exportando " + (selectedRange.active ? "solo el In/Out" : "la secuencia completa") + " de " +
+        (sourceContext.name || "la secuencia activa") + " · " + readableDuration(selectedRange.duration) +
+        " · In " + readableDuration(selectedRange.start) + " / Out " + readableDuration(selectedRange.end) + "…", 12, sourceChange.changed);
       try {
-        await bridge.exportAudio(audioPath, presetPath);
+        await bridge.exportAudio(audioPath, presetPath, selectedRange.active);
       } catch (error) {
         throw new Error("Premiere no pudo exportar el audio. " + error.message);
       }
@@ -151,13 +192,24 @@
       lastTranscript.sourceSequenceId = sourceContext.id || "";
       lastTranscript.sourceSequenceName = sourceContext.name || "";
       lastTranscript.sourceSequenceDuration = sourceContext.duration || 0;
-      lastTranscript.sourceSequenceIn = sourceContext.inPoint || 0;
-      lastTranscript.sourceSequenceOut = sourceContext.outPoint || sourceContext.duration || 0;
+      lastTranscript.sourceSequenceIn = selectedRange.start;
+      lastTranscript.sourceSequenceOut = selectedRange.end;
+      lastTranscript.transcriptionRange = {
+        mode: selectedRange.active ? "in-out" : "full-sequence",
+        start: selectedRange.start,
+        end: selectedRange.end,
+        duration: selectedRange.duration,
+        offset: selectedRange.start
+      };
       lastTranscript.sourceSequenceFps = sourceContext.frameRate || 0;
       lastTranscript.sourceSequenceSnapshot = sourceContext;
       lastTranscript.projectPath = sourceTimelineContext.projectPath || "";
+      lastTranscript.words = transcriptTools.offsetWords(lastTranscript.words, selectedRange.start);
       lastTranscript.words = transcriptTools.anchorWordsToSource(lastTranscript.words, sourceTimelineContext, sourceContext.id);
       lastTranscript.run = {
+        id: "run-" + runStartedAt.replace(/[^0-9]/g, ""),
+        startedAt: runStartedAt,
+        completedAt: new Date().toISOString(),
         extensionVersion: EXTENSION_VERSION,
         provider: provider,
         model: options.model,
@@ -169,18 +221,26 @@
         lines: options.lines,
         audio: {
           fileName: safeFileName(sourceContext.name || "secuencia") + ".mp3",
-          duration: sourceContext.duration || 0
+          duration: selectedRange.duration,
+          exportedBytes: audioFileSize(audioPath)
         },
+        requestParameters: lastTranscript.providerMetadata && lastTranscript.providerMetadata.requestParameters || {},
+        sourceChange: sourceChange,
         sequence: {
           id: sourceContext.id || "",
           name: sourceContext.name || "",
           duration: sourceContext.duration || 0,
-          inPoint: sourceContext.inPoint || 0,
-          outPoint: sourceContext.outPoint || sourceContext.duration || 0,
+          inPoint: selectedRange.start,
+          outPoint: selectedRange.end,
+          rangeMode: selectedRange.active ? "in-out" : "full-sequence",
+          offset: selectedRange.start,
           frameRate: sourceContext.frameRate || 0
         }
       };
-      lastTranscript.validation = validateTranscriptCompleteness(lastTranscript, sourceContext);
+      lastTranscript.validation = validateTranscriptCompleteness(lastTranscript, {
+        duration: selectedRange.duration,
+        rangeStart: selectedRange.start
+      });
       lastTranscript.sourceBoundaries = transcriptTools.timelineEditBoundaries(sourceTimelineContext, sourceContext.id);
       options.hardBoundaries = lastTranscript.sourceBoundaries.hard;
       options.softBoundaries = lastTranscript.sourceBoundaries.soft;
@@ -234,7 +294,9 @@
         maxCharsPerLine: transcriptTools.suggestedMaxCharsPerLine(targetSequence.frameWidth, targetSequence.frameHeight),
         hardBoundaries: targetBoundaries.hard,
         softBoundaries: targetBoundaries.soft,
-        cleanBackchannels: options.cleanBackchannels
+        cleanBackchannels: options.cleanBackchannels,
+        language: lastTranscript.outputLanguage !== "same" ? lastTranscript.outputLanguage : lastTranscript.inputLanguage,
+        removePunctuation: options.removePunctuation
       });
       if (!captions.length) {
         throw new Error("No hay texto para reformatear.");
@@ -267,7 +329,9 @@
       maxCharsPerLine: options.maxCharsPerLine,
       hardBoundaries: options.hardBoundaries,
       softBoundaries: options.softBoundaries,
-      cleanBackchannels: options.cleanBackchannels
+      cleanBackchannels: options.cleanBackchannels,
+      language: data.outputLanguage !== "same" ? data.outputLanguage : data.inputLanguage,
+      removePunctuation: options.removePunctuation
     });
     if (!captions.length) {
       throw new Error("No hay texto para crear subtítulos.");
@@ -300,17 +364,35 @@
   }
 
   function collectOptions() {
+    var model = byId("model").value;
+    var translateOutput = byId("translate-output").checked;
     return {
-      model: byId("model").value,
-      inputLanguage: byId("input-language").value,
-      outputLanguage: byId("output-language").value,
+      model: model,
+      inputLanguage: translateOutput ? byId("input-language").value : (model === "assemblyai:slam-1" ? "en" : "auto"),
+      outputLanguage: translateOutput ? byId("output-language").value : "same",
+      translateOutput: translateOutput,
       wordsPerLine: parseInt(byId("words-per-line").value, 10),
       lines: parseInt(byId("lines-per-caption").value, 10),
       identifySpeakers: byId("identify-speakers").checked,
       speakerCount: getSpeakerRows().length,
       speakerNames: getSpeakerNames(),
       cleanBackchannels: byId("clean-backchannels").checked,
+      removePunctuation: byId("remove-punctuation").checked,
       keys: savedKeys()
+    };
+  }
+
+  function transcriptionRange(sequence) {
+    var duration = Math.max(0, Number(sequence && sequence.duration || 0));
+    var start = Math.max(0, Number(sequence && sequence.inPoint || 0));
+    var end = Math.min(duration, Number(sequence && sequence.outPoint || duration));
+    var frame = Number(sequence && sequence.frameRate || 0) > 0 ? 1 / Number(sequence.frameRate) : 0.04;
+    var active = end > start + frame && (start > frame / 2 || end < duration - frame / 2);
+    return {
+      active: active,
+      start: active ? start : 0,
+      end: active ? end : duration,
+      duration: active ? Math.max(0, end - start) : duration
     };
   }
 
@@ -422,15 +504,19 @@
       assemblyai: fileSettings.assemblyai || localStorage.getItem("assemblyaiKey") || "",
       speechmatics: fileSettings.speechmatics || localStorage.getItem("speechmaticsKey") || "",
       deepgram: fileSettings.deepgram || localStorage.getItem("deepgramKey") || ""
+      , elevenlabs: fileSettings.elevenlabs || localStorage.getItem("elevenlabsKey") || ""
     };
     byId("assemblyai-key").value = keys.assemblyai;
     byId("speechmatics-key").value = keys.speechmatics;
     byId("deepgram-key").value = keys.deepgram;
+    byId("elevenlabs-key").value = keys.elevenlabs;
     if (!fileSettings.assemblyai && !fileSettings.speechmatics && !fileSettings.deepgram && (keys.assemblyai || keys.speechmatics || keys.deepgram)) {
       writeSettingsFile(keys);
     }
     var cleanBackchannels = localStorage.getItem("cleanBackchannels");
     byId("clean-backchannels").checked = cleanBackchannels == null ? true : cleanBackchannels !== "false";
+    byId("remove-punctuation").checked = localStorage.getItem("removePunctuation") === "true";
+    byId("translate-output").checked = localStorage.getItem("translateOutput") === "true";
   }
 
   function saveSettings() {
@@ -438,10 +524,12 @@
       assemblyai: byId("assemblyai-key").value.trim(),
       speechmatics: byId("speechmatics-key").value.trim(),
       deepgram: byId("deepgram-key").value.trim()
+      , elevenlabs: byId("elevenlabs-key").value.trim()
     };
     localStorage.setItem("assemblyaiKey", keys.assemblyai);
     localStorage.setItem("speechmaticsKey", keys.speechmatics);
     localStorage.setItem("deepgramKey", keys.deepgram);
+    localStorage.setItem("elevenlabsKey", keys.elevenlabs);
     writeSettingsFile(keys);
     hideSettings();
     setStatus("Configuración guardada.", 0);
@@ -449,6 +537,8 @@
 
   function savePreferences() {
     localStorage.setItem("cleanBackchannels", String(byId("clean-backchannels").checked));
+    localStorage.setItem("removePunctuation", String(byId("remove-punctuation").checked));
+    localStorage.setItem("translateOutput", String(byId("translate-output").checked));
   }
 
   function setBusy(value) {
@@ -470,6 +560,7 @@
       assemblyai: fileSettings.assemblyai || localStorage.getItem("assemblyaiKey") || "",
       speechmatics: fileSettings.speechmatics || localStorage.getItem("speechmaticsKey") || "",
       deepgram: fileSettings.deepgram || localStorage.getItem("deepgramKey") || ""
+      , elevenlabs: fileSettings.elevenlabs || localStorage.getItem("elevenlabsKey") || ""
     };
   }
 
@@ -553,6 +644,14 @@
     try {
       if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); }
     } catch (_error) {}
+  }
+
+  function audioFileSize(filePath) {
+    try {
+      return Number(fs.statSync(filePath).size || 0);
+    } catch (_error) {
+      return 0;
+    }
   }
 
   function safeFileName(value) {
@@ -818,29 +917,28 @@
   }
 
   function validateTranscriptCompleteness(data, sequence) {
-    var expected = Number(sequence.duration || 0);
-    var providerDuration = Number(data.providerMetadata && data.providerMetadata.audioDuration || 0);
-    var words = data.words || [];
-    var transcriptEnd = words.length ? Number(words[words.length - 1].end || 0) : 0;
-    var tolerance = Math.max(3, expected * 0.05);
-    if (expected > 0 && providerDuration > 0 && Math.abs(providerDuration - expected) > tolerance) {
-      throw new Error(
-        "La transcripción quedó incompleta: el audio de Premiere dura " + readableDuration(expected) +
-        " y el servicio procesó " + readableDuration(providerDuration) + ". No se guardaron archivos."
-      );
-    }
-    if (expected >= 120 && transcriptEnd > 0 && transcriptEnd < expected * 0.35) {
-      throw new Error(
-        "La transcripción parece incompleta: el audio dura " + readableDuration(expected) +
-        " y el texto termina en " + readableDuration(transcriptEnd) + ". No se guardaron archivos."
-      );
-    }
+    return transcriptTools.validateTranscriptCompleteness(data, sequence);
+  }
+
+  function findPreviousSource(timelineContext, sequenceId) {
+    var candidates = transcriptLibrary.loadProjectTranscripts(timelineContext.projectPath).filter(function (item) {
+      return String(item.sourceSequenceId || "") === String(sequenceId || "");
+    }).sort(function (a, b) {
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    });
+    return candidates.length ? (candidates[0].sourceSequenceSnapshot || candidates[0].run && candidates[0].run.sequence || null) : null;
+  }
+
+  function describeSourceChange(current, previous) {
+    if (!previous) { return { changed: false, fields: [], message: "" }; }
+    var fields = [];
+    ["duration", "inPoint", "outPoint"].forEach(function (field) {
+      if (Math.abs(Number(current[field] || 0) - Number(previous[field] || 0)) > 0.04) { fields.push(field); }
+    });
     return {
-      complete: true,
-      expectedAudioDuration: expected,
-      providerAudioDuration: providerDuration,
-      transcriptEnd: transcriptEnd,
-      checkedAt: new Date().toISOString()
+      changed: fields.length > 0,
+      fields: fields,
+      message: fields.length ? "la duración o el In/Out cambiaron desde la última transcripción de esta secuencia" : ""
     };
   }
 
