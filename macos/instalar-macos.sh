@@ -58,7 +58,7 @@ trap on_exit EXIT
 for item in index.html css CSXS js jsx presets; do cp -R "$SOURCE/$item" "$STAGE/$item"; done
 chmod -R u+rwX,go+rX "$STAGE"
 
-# CEP 11/12: permite cargar esta beta sin firma Adobe; no desactiva Gatekeeper.
+# CEP 11/12: permite cargar esta extensión sin firma Adobe; no desactiva Gatekeeper.
 # Estas preferencias son compartidas con otras extensiones CEP del usuario.
 for version in 11 12; do
   /usr/bin/defaults write "com.adobe.CSXS.$version" PlayerDebugMode -string '1'
@@ -70,7 +70,7 @@ if [ -e "$TARGET" ]; then
 fi
 mv "$STAGE" "$TARGET"
 FINISHED=1
-printf '\nLa Subtituleta 0.4.0 macOS beta.1 instalada.\nUbicación: %s\n' "$TARGET"
+printf '\nLa Subtituleta 0.6.1 para macOS instalada.\nUbicación: %s\n' "$TARGET"
 printf 'Abrí Premiere > Ventana > Extensiones (heredado) > La Subtituleta.\n'
 printf 'Tus API keys y la memoria se conservan al reinstalar.\n'
 [ -z "$BACKUP" ] || printf 'Copia de la versión anterior: %s\n' "$BACKUP"

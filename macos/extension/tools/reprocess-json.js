@@ -54,7 +54,7 @@ function reprocess(inputPath, overrides) {
   const outputPath = overrides.output || path.join(parsed.dir, parsed.name + "-reprocesado-" + options.wordsPerLine + "x" + options.lines + ".srt");
   const auditPath = outputPath.replace(/\.srt$/i, "-auditoria.json");
   const audit = {
-    generatedAt: new Date().toISOString(), engineVersion: "0.6.1-macos-beta", sourceJson: inputPath,
+    generatedAt: new Date().toISOString(), engineVersion: "0.6.1", sourceJson: inputPath,
     sourceRun: run, options, totals: { words: data.words.length, captions: captions.length },
     captions: captions.map((caption, index) => ({
       index: index + 1, start: caption.start, end: caption.end, text: caption.text,

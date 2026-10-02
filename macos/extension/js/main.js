@@ -11,7 +11,7 @@
   var transcriptLibrary = window.LaSubtituletaLibrary;
   var lastTranscript = null;
   var busy = false;
-  var EXTENSION_VERSION = "0.6.1-macos-beta";
+  var EXTENSION_VERSION = "0.6.1";
   var PROVIDER_LABELS = {
     assemblyai: "AssemblyAI",
     speechmatics: "Speechmatics",

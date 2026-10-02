@@ -5,7 +5,7 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 const crypto = require("node:crypto");
 const root = path.resolve(__dirname, "..");
-const output = path.join(root, "dist", "La-Subtituleta-macOS-v0.6.1-beta.zip");
+const output = path.join(root, "dist", "La-Subtituleta-macOS.zip");
 const entries = [];
 function add(file, name) {
   const stat = fs.lstatSync(file);
@@ -23,7 +23,7 @@ function add(file, name) {
 for (const name of ["index.html", "assets", "css", "CSXS", "js", "jsx", "presets", "LICENSE"]) {
   add(path.join(root, "extension", name), name);
 }
-for (const name of ["INSTALAR.command", "DESINSTALAR.command", "instalar-macos.sh", "INSTRUCCIONES-INSTALACION.txt", "PRUEBAS-BETA.txt"]) {
+for (const name of ["INSTALAR.command", "DESINSTALAR.command", "instalar-macos.sh", "INSTRUCCIONES-INSTALACION.txt", "PRUEBAS.txt"]) {
   add(path.join(root, name), name);
 }
 const table = Array.from({ length: 256 }, (_, n) => {

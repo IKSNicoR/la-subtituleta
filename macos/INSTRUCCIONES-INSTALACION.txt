@@ -1,12 +1,12 @@
-LA SUBTITULETA — macOS v0.6.1 beta
+LA SUBTITULETA — macOS v0.6.1
 
-Beta para probar con Premiere Pro 2024 o posterior. Anotá tu versión exacta
+Compatible con Premiere Pro 2024 o posterior. Anotá tu versión exacta
 de Premiere y macOS, y si tu Mac es Apple Silicon (M1/M2/M3/...) o Intel.
 La compatibilidad final depende de estas pruebas en Macs reales.
 
 INSTALACIÓN
 1. Cerrá Premiere por completo: Premiere Pro > Salir (Cmd+Q).
-2. Descargá La-Subtituleta-macOS-v0.6.1-beta.zip.
+2. Descargá La-Subtituleta-macOS.zip.
 3. Doble clic al ZIP para descomprimirlo con la utilidad de macOS.
 4. Abrí la carpeta extraída. Doble clic en INSTALAR.command.
 5. Se abre Terminal. Esperá el mensaje "La Subtituleta ... instalada".
@@ -14,10 +14,10 @@ INSTALACIÓN
 6. Abrí Premiere > Ventana > Extensiones (heredado) > La Subtituleta.
    En inglés: Window > Extensions (Legacy) > La Subtituleta.
 7. Tocá el engranaje, pegá al menos una API key y pulsá GUARDAR.
-8. Seguí PRUEBAS-BETA.txt y enviá los resultados a Nico.
+8. Seguí PRUEBAS.txt y enviá los resultados a Nico.
 
 SI MACOS BLOQUEA EL INSTALADOR
-Esta beta todavía no tiene firma/notarización de Apple.
+Esta versión todavía no tiene firma/notarización de Apple.
 Después de intentar abrir INSTALAR.command, entrá en Configuración del Sistema
 > Privacidad y seguridad > Abrir igualmente, si aparece esa opción para el
 archivo de LS que acabás de descargar. En versiones anteriores de macOS puede

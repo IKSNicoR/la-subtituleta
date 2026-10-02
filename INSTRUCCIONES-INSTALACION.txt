@@ -1,4 +1,4 @@
-LA SUBTITULETA 0.6.1 BETA — INSTALACIÓN EN WINDOWS
+LA SUBTITULETA 0.6.1 — INSTALACIÓN EN WINDOWS
 
 1. Cerrá Adobe Premiere Pro.
 2. Descomprimí por completo el archivo ZIP.

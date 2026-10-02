@@ -4,10 +4,10 @@ Extensión gratuita para Adobe Premiere Pro que transcribe la secuencia activa c
 
 ## Descargar
 
-- [Windows v0.6.1 beta](https://github.com/IKSNicoR/la-subtituleta/releases/download/v0.6.1-beta/La-Subtituleta-Windows-v0.6.1-beta.zip)
-- [macOS v0.6.1 beta](https://github.com/IKSNicoR/la-subtituleta/releases/download/v0.6.1-beta/La-Subtituleta-macOS-v0.6.1-beta.zip)
+- [Windows](https://github.com/IKSNicoR/la-subtituleta/releases/latest/download/La-Subtituleta-Windows.zip)
+- [macOS](https://github.com/IKSNicoR/la-subtituleta/releases/latest/download/La-Subtituleta-macOS.zip)
 
-Premiere Pro 2024 o posterior. La versión para macOS está en beta y necesita validación en Macs reales, tanto Intel como Apple Silicon.
+Premiere Pro 2024 o posterior. La versión para macOS continúa validándose en Macs reales, tanto Intel como Apple Silicon.
 
 ## Instalar en Windows
 
@@ -19,7 +19,7 @@ Premiere Pro 2024 o posterior. La versión para macOS está en beta y necesita v
 
 Para actualizar, repetí la instalación con el nuevo paquete. Las claves y la biblioteca se conservan. Para desinstalar, cerrá Premiere y ejecutá `DESINSTALAR.cmd`.
 
-## Instalar en macOS (beta)
+## Instalar en macOS
 
 1. Cerrá Premiere por completo con Cmd+Q.
 2. Descargá y descomprimí el ZIP de macOS.
@@ -27,7 +27,7 @@ Para actualizar, repetí la instalación con el nuevo paquete. Las claves y la b
 4. Abrí Premiere → Ventana → Extensiones (heredado) → La Subtituleta.
 5. En Configuración, pegá tu API key y guardá.
 
-Si macOS bloquea el instalador, seguí `INSTRUCCIONES-INSTALACION.txt` dentro del ZIP. No requiere contraseña de administrador. El paquete incluye una guía breve de pruebas para la beta y `DESINSTALAR.command`.
+Si macOS bloquea el instalador, seguí `INSTRUCCIONES-INSTALACION.txt` dentro del ZIP. No requiere contraseña de administrador. El paquete incluye una guía breve de pruebas y `DESINSTALAR.command`.
 
 ## Obtener una API key
 
@@ -58,7 +58,7 @@ Para reportar un problema, incluí el error exacto, versiones de Premiere y del 
 
 ## Código y pruebas
 
-La raíz contiene la versión Windows; `macos/` contiene la beta para Mac y su empaquetador. Los ZIP de instalación se distribuyen en Releases.
+La raíz contiene la versión Windows; `macos/` contiene la versión para Mac y su empaquetador. Los ZIP de instalación se distribuyen en Releases.
 
 ```sh
 node --test test/*.test.js
