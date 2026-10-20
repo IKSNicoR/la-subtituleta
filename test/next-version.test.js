@@ -17,7 +17,7 @@ test("la próxima versión usa la leyenda solicitada sin encabezado interno", ()
   assert.doesNotMatch(panel, /<h1>/);
   assert.doesNotMatch(panel, /class="panel-header"/);
   assert.match(panel, /Esta extensión fue hecha por Nico Russo, con mucho amor\./);
-  assert.match(manifest, /ExtensionBundleVersion="0\.6\.1"/);
+  assert.match(manifest, /ExtensionBundleVersion="0\.6\.2"/);
 });
 
 test("los cuatro proveedores activan diarización", () => {
@@ -182,10 +182,10 @@ test("el JSON guarda metadata editorial para LLMs", () => {
 });
 
 test("Configuración enlaza la creación de API keys en el navegador del sistema", () => {
-  assert.match(panel, /data-api-url="https:\/\/www\.assemblyai\.com\/dashboard\/api-keys"/);
-  assert.match(panel, /data-api-url="https:\/\/portal\.speechmatics\.com\/"/);
-  assert.match(panel, /data-api-url="https:\/\/console\.deepgram\.com\/"/);
-  assert.match(panel, /data-api-url="https:\/\/elevenlabs\.io\/app\/settings\/api-keys"/);
+  assert.match(panel, /data-api-url="https:\/\/dub\.sh\/ASSEMBLYAI_LS"/);
+  assert.match(panel, /data-api-url="https:\/\/dub\.sh\/Speech_LS"/);
+  assert.match(panel, /data-api-url="https:\/\/dub\.sh\/DeepGram_LS"/);
+  assert.match(panel, /data-api-url="https:\/\/dub\.sh\/ElevenLabs_LS"/);
   assert.match(main, /openURLInDefaultBrowser/);
   assert.match(main, /function openExternalUrl/);
 });

@@ -61,7 +61,7 @@ function reprocess(inputPath, overrides) {
   const auditPath = outputPath.replace(/\.srt$/i, "-auditoria.json");
   const audit = {
     generatedAt: new Date().toISOString(),
-    engineVersion: "0.6.1",
+    engineVersion: "0.6.2",
     sourceJson: inputPath,
     sourceRun: run,
     options,

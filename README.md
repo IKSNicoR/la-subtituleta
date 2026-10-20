@@ -31,10 +31,10 @@ Si macOS bloquea el instalador, seguí `INSTRUCCIONES-INSTALACION.txt` dentro de
 
 ## Obtener una API key
 
-- [AssemblyAI](https://dub.sh/assemblyai-yt)
-- [Speechmatics](https://dub.sh/speechm-yt)
-- [Deepgram](https://dub.sh/deepgram-yt)
-- [ElevenLabs](https://elevenlabs.io/app/developers/api-keys)
+- [AssemblyAI](https://dub.sh/ASSEMBLYAI_LS)
+- [Speechmatics](https://dub.sh/Speech_LS)
+- [Deepgram](https://dub.sh/DeepGram_LS)
+- [ElevenLabs](https://dub.sh/ElevenLabs_LS)
 
 Creá una cuenta en el servicio elegido y copiá su API key. Alcanza con una. Los créditos y condiciones gratuitos pueden cambiar: revisá el panel del proveedor. El audio se envía al servicio seleccionado. Las claves se guardan localmente en tu computadora; no las compartas.
 

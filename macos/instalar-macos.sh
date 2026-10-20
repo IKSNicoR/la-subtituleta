@@ -70,7 +70,7 @@ if [ -e "$TARGET" ]; then
 fi
 mv "$STAGE" "$TARGET"
 FINISHED=1
-printf '\nLa Subtituleta 0.6.1 para macOS instalada.\nUbicación: %s\n' "$TARGET"
+printf '\nLa Subtituleta 0.6.2 para macOS instalada.\nUbicación: %s\n' "$TARGET"
 printf 'Abrí Premiere > Ventana > Extensiones (heredado) > La Subtituleta.\n'
 printf 'Tus API keys y la memoria se conservan al reinstalar.\n'
 [ -z "$BACKUP" ] || printf 'Copia de la versión anterior: %s\n' "$BACKUP"
