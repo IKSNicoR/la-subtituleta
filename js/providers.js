@@ -53,9 +53,7 @@
     var understandingRequest = {};
     if (options.identifySpeakers) {
       payload.speaker_labels = true;
-      if (Number(options.speakerCount) > 1) {
-        payload.speakers_expected = Number(options.speakerCount);
-      }
+      payload.speaker_options = { include_speaker_confidence: true };
       var speakerNames = transcript.parseSpeakerNames(options.speakerNames);
       if (speakerNames.length) {
         understandingRequest.speaker_identification = {
@@ -114,7 +112,7 @@
         language_code: payload.language_code || null,
         speaker_labels: Boolean(payload.speaker_labels),
         disfluencies: payload.disfluencies,
-        speakers_expected: payload.speakers_expected || null,
+        speaker_options: payload.speaker_options || null,
         speech_understanding: payload.speech_understanding || null
       }
     });
@@ -132,6 +130,7 @@
             end: word.end,
             confidence: word.confidence,
             speaker: word.speaker == null ? utterance.speaker : word.speaker,
+            speakerConfidence: word.speaker_confidence == null ? utterance.speaker_confidence : word.speaker_confidence,
             utteranceId: "assembly:" + utteranceIndex,
             boundaryBefore: wordIndex === 0,
             boundaryAfter: wordIndex === utteranceWords.length - 1
@@ -148,6 +147,7 @@
         end: word.end / 1000,
         confidence: word.confidence,
         speaker: word.speaker,
+        speakerConfidence: word.speakerConfidence == null ? word.speaker_confidence : word.speakerConfidence,
         utteranceId: word.utteranceId,
         boundaryBefore: word.boundaryBefore,
         boundaryAfter: word.boundaryAfter

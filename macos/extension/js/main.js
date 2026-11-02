@@ -11,7 +11,7 @@
   var transcriptLibrary = window.LaSubtituletaLibrary;
   var lastTranscript = null;
   var busy = false;
-  var EXTENSION_VERSION = "0.6.2";
+  var EXTENSION_VERSION = "0.6.4";
   var PROVIDER_LABELS = {
     assemblyai: "AssemblyAI",
     speechmatics: "Speechmatics",
@@ -135,7 +135,13 @@
       setStatus("Este panel debe ejecutarse dentro de Premiere Pro.", 0, true);
       return;
     }
-    var options = collectOptions();
+    var options;
+    try {
+      options = collectOptions();
+    } catch (error) {
+      setStatus(error.message, 0, true);
+      return;
+    }
     var provider = options.model.split(":")[0];
     if (!options.keys[provider]) {
       showSettings();
@@ -248,7 +254,10 @@
       options.persistRunCopy = true;
       setStatus("Creando la pista de subtítulos…", 82);
       await importTranscript(lastTranscript, options);
-      setStatus("Subtítulos importados en " + lastTranscript.outputFolder + ".", 100);
+      var warningCount = lastTranscript.confidenceReview && lastTranscript.confidenceReview.count || 0;
+      setStatus("Subtítulos importados en " + lastTranscript.outputFolder + "." +
+        (warningCount ? " · " + warningCount + " palabras dudosas marcadas en el JSON." : ""), 100);
+      resetSpeakerEditor();
     } catch (error) {
       if (isCreditError(error)) {
         showCreditOffer(error, provider);
@@ -374,7 +383,7 @@
       wordsPerLine: parseInt(byId("words-per-line").value, 10),
       lines: parseInt(byId("lines-per-caption").value, 10),
       identifySpeakers: byId("identify-speakers").checked,
-      speakerCount: getSpeakerRows().length,
+      speakerCount: getSpeakerNames().length,
       speakerNames: getSpeakerNames(),
       cleanBackchannels: byId("clean-backchannels").checked,
       removePunctuation: byId("remove-punctuation").checked,
@@ -414,9 +423,41 @@
     input.value = String(metadata.name || "");
     input.setAttribute("aria-label", "Nombre de Speaker " + (index + 1));
 
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "speaker-remove secondary-button";
+    remove.textContent = "−";
+    remove.title = "Quitar speaker";
+    remove.setAttribute("aria-label", "Quitar Speaker " + (index + 1));
+    remove.addEventListener("click", function () {
+      if (rows.children.length === 1) {
+        input.value = "";
+        return;
+      }
+      rows.removeChild(row);
+      renumberSpeakerRows();
+    });
+
     row.appendChild(label);
     row.appendChild(input);
+    row.appendChild(remove);
     rows.appendChild(row);
+    renumberSpeakerRows();
+  }
+
+  function renumberSpeakerRows() {
+    Array.prototype.slice.call(byId("speaker-rows").children).forEach(function (row, index) {
+      var number = index + 1;
+      row.querySelector(".speaker-row-label").textContent = "Speaker " + number;
+      row.querySelector("input").setAttribute("aria-label", "Nombre de Speaker " + number);
+      row.querySelector(".speaker-remove").setAttribute("aria-label", "Quitar Speaker " + number);
+    });
+  }
+
+  function resetSpeakerEditor() {
+    var rows = byId("speaker-rows");
+    rows.textContent = "";
+    addSpeakerRow();
   }
 
   function renderSpeakerRows(speakers) {
@@ -441,7 +482,7 @@
   }
 
   function getSpeakerNames() {
-    return getSpeakerRows().map(function (speaker) { return speaker.name; });
+    return getSpeakerRows().map(function (speaker) { return speaker.name; }).filter(Boolean);
   }
 
   function applySpeakerEditor() {
@@ -477,10 +518,6 @@
         lastTranscript = JSON.parse(fs.readFileSync(cachePath, "utf8"));
         persistTranscript(lastTranscript);
         byId("reflow").disabled = false;
-        if (lastTranscript.identifySpeakers) {
-          byId("identify-speakers").checked = true;
-          renderSpeakerRows(lastTranscript.speakers || transcriptTools.createSpeakerMap(lastTranscript.words, lastTranscript.speakerNames));
-        }
       }
     } catch (_error) {
       lastTranscript = null;
@@ -748,6 +785,23 @@
       return enriched;
     });
 
+    var confidenceWarnings = transcriptTools.findConfidenceWarnings(
+      data.words,
+      data.providerMetadata && data.providerMetadata.provider,
+      0.75
+    );
+    var warningsByWord = {};
+    confidenceWarnings.forEach(function (warning) { warningsByWord[warning.wordIndex] = warning.reasons; });
+    data.words.forEach(function (word, index) {
+      word.confidenceReview = warningsByWord[index] || [];
+    });
+    data.confidenceReview = {
+      provider: data.providerMetadata && data.providerMetadata.provider || "",
+      threshold: 0.75,
+      count: confidenceWarnings.length,
+      words: confidenceWarnings
+    };
+
     captions.forEach(function (caption, index) {
       var previous = captions[index - 1];
       var next = captions[index + 1];
@@ -802,6 +856,7 @@
       hangingConnectors: captions.filter(function (caption) { return caption.editorial && caption.editorial.hangingConnector; }).length,
       readingRisks: captions.filter(function (caption) { return caption.editorial && caption.editorial.readingRisk; }).length,
       lowConfidenceCaptions: captions.filter(function (caption) { return caption.editorial && caption.editorial.lowConfidence; }).length,
+      lowConfidenceWordsForReview: words.filter(function (word) { return word.confidenceReview && word.confidenceReview.length; }).length,
       longPauses: words.filter(function (word) { return word.pauseBeforeClass === "long" || word.pauseAfterClass === "long"; }).length
     };
   }

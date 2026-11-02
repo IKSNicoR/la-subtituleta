@@ -9,6 +9,14 @@ Extensión gratuita para Adobe Premiere Pro que transcribe la secuencia activa c
 
 Premiere Pro 2024 o posterior. La versión para macOS continúa validándose en Macs reales, tanto Intel como Apple Silicon.
 
+## Novedades de la versión 0.6.4
+
+- Los speakers ya no quedan arrastrados entre transcripciones: se pueden quitar y el formulario vuelve a una fila vacía después de cada trabajo.
+- AssemblyAI decide la cantidad real de voces y conserva su nivel de confianza en el JSON.
+- Las cifras y palabras dudosas de AssemblyAI quedan marcadas en el JSON para revisión, sin modificar el SRT.
+- El largo visual de los captions se ajusta de forma conservadora según el formato de la secuencia: horizontal, 4:3, cuadrado o vertical.
+- Reflow conserva todas las mejoras previas de sincronía, cortes del timeline y secuencias derivadas.
+
 ## Instalar en Windows
 
 1. Descargá y descomprimí el ZIP de Windows.

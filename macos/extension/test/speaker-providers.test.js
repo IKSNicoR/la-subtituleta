@@ -71,12 +71,30 @@ test("AssemblyAI envía nombres y devuelve captions con speaker identificado", a
   });
   const result = await providers.transcribe(baseOptions("assemblyai:universal-3-5-pro"), () => {});
   assert.equal(submittedPayload.speaker_labels, true);
-  assert.equal(submittedPayload.speakers_expected, 2);
+  assert.equal(submittedPayload.speakers_expected, undefined);
+  assert.deepEqual(JSON.parse(JSON.stringify(submittedPayload.speaker_options)), { include_speaker_confidence: true });
   assert.equal(submittedPayload.disfluencies, false);
   assert.equal(submittedPayload.speech_understanding.request.speaker_identification.speakers[0].name, "Nico");
   assert.equal(result.words[0].speakerLabel, "Nico");
   assert.equal(result.words[0].boundaryBefore, true);
   assert.equal(result.words[0].boundaryAfter, true);
+});
+
+test("AssemblyAI conserva la confianza del speaker por palabra", async () => {
+  const providers = loadProviders({
+    request: async () => ({ body: Buffer.from(JSON.stringify({ upload_url: "https://audio" })) }),
+    json: async (url) => url.endsWith("/v2/transcript") ? { id: "job" } : {
+      status: "completed",
+      language_code: "es",
+      utterances: [{
+        speaker: "A", speaker_confidence: 0.81, start: 0, end: 500,
+        words: [{ text: "Hola", start: 0, end: 500, confidence: 0.98, speaker: "A", speaker_confidence: 0.76 }]
+      }]
+    }
+  });
+  const result = await providers.transcribe(baseOptions("assemblyai:universal-3-5-pro"), () => {});
+  assert.equal(result.words[0].speakerConfidence, 0.76);
+  assert.equal(result.providerMetadata.requestParameters.speaker_options.include_speaker_confidence, true);
 });
 
 test("Deepgram usa el diarizador actual y etiqueta por orden", async () => {

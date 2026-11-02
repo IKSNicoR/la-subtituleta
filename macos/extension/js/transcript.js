@@ -55,6 +55,7 @@
         confidence: Number(word.confidence == null ? 1 : word.confidence),
         speaker: word.speaker == null ? "" : String(word.speaker),
         speakerLabel: String(word.speakerLabel || ""),
+        speakerConfidence: word.speakerConfidence == null ? null : Number(word.speakerConfidence),
         utteranceId: String(word.utteranceId || ""),
         boundaryBefore: Boolean(word.boundaryBefore),
         boundaryAfter: Boolean(word.boundaryAfter),
@@ -144,6 +145,32 @@
       sentenceStart = index + 1;
     });
     return output;
+  }
+
+  function findConfidenceWarnings(words, provider, threshold) {
+    if (String(provider || "").toLowerCase() !== "assemblyai") { return []; }
+    threshold = Number(threshold == null ? 0.75 : threshold);
+    var normalized = normalizeWords(words);
+    var warnings = [];
+    normalized.forEach(function (word, index) {
+      if (!isFinite(word.confidence) || word.confidence >= threshold) { return; }
+      var reasons = [];
+      if (/\d/.test(word.text)) { reasons.push("number"); }
+      var previous = normalized[index - 1];
+      if (previous && !previous.sentenceEnd && /^[A-ZÁÉÍÓÚÜÑ]/.test(word.text)) {
+        reasons.push("mid-sentence-capitalized");
+      }
+      if (!reasons.length) { return; }
+      warnings.push({
+        wordIndex: index,
+        text: word.text,
+        start: word.start,
+        end: word.end,
+        confidence: word.confidence,
+        reasons: reasons
+      });
+    });
+    return warnings;
   }
 
   function splitTokenPunctuation(value) {
@@ -821,9 +848,10 @@
     if (!isFinite(frameWidth) || !isFinite(frameHeight) || frameWidth <= 0 || frameHeight <= 0) {
       return 0;
     }
-    if (frameHeight > frameWidth) {
-      return 28;
-    }
+    var aspectRatio = frameWidth / frameHeight;
+    if (aspectRatio < 0.9) { return 28; }
+    if (aspectRatio < 1.15) { return 30; }
+    if (aspectRatio < 1.5) { return 34; }
     return 42;
   }
 
@@ -1075,6 +1103,7 @@
     mapWordsToSequence: mapWordsToSequence,
     suggestedMaxCharsPerLine: suggestedMaxCharsPerLine,
     normalizeWords: normalizeWords,
+    findConfidenceWarnings: findConfidenceWarnings,
     prepareWords: prepareWords,
     normalizeSpanishOpeningMarks: normalizeSpanishOpeningMarks,
     normalizeSpanishNumbers: normalizeSpanishNumbers,

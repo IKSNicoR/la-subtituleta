@@ -1,4 +1,4 @@
-LA SUBTITULETA — PRUEBAS macOS v0.6.2
+LA SUBTITULETA — PRUEBAS macOS v0.6.4
 
 Usá una copia de un proyecto para la prueba. Empezá con 1 o 2 minutos.
 No hace falta que todos prueben los tres servicios: avisá cuál usaste.
@@ -48,7 +48,7 @@ Opcional: español > inglés en un modelo que habilite traducción.
 
 QUÉ ENVIAR A NICO
 - Mac: modelo y chip. macOS: versión. Premiere: versión exacta.
-- Build: 0.6.2.
+- Build: 0.6.4.
 - Modelo de transcripción, duración, FPS y start time de la secuencia.
 - Qué pruebas salieron bien y en cuál falló.
 - Texto exacto del error y captura de LS/Terminal si corresponde.

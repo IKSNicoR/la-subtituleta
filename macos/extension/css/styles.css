@@ -151,9 +151,15 @@ button:focus-visible {
 
 .speaker-row {
   display: grid;
-  grid-template-columns: 78px 1fr;
+  grid-template-columns: 78px 1fr 32px;
   align-items: center;
   gap: 8px;
+}
+
+.speaker-remove {
+  min-height: 32px;
+  padding: 0;
+  font-size: 18px;
 }
 
 .speaker-row-label {

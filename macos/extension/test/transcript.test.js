@@ -2,6 +2,20 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const transcript = require("../js/transcript.js");
 
+test("AssemblyAI marca cifras y mayúsculas internas con confianza baja", () => {
+  const warnings = transcript.findConfidenceWarnings([
+    { text: "La", start: 0, end: 0.1, confidence: 0.99 },
+    { text: "cifra", start: 0.1, end: 0.2, confidence: 0.99 },
+    { text: "400.000", start: 0.2, end: 0.4, confidence: 0.71 },
+    { text: "y", start: 0.4, end: 0.5, confidence: 0.99 },
+    { text: "Xinjiang", start: 0.5, end: 0.8, confidence: 0.62 }
+  ], "assemblyai", 0.75);
+  assert.deepEqual(warnings.map((warning) => warning.text), ["400.000", "Xinjiang"]);
+  assert.deepEqual(warnings[0].reasons, ["number"]);
+  assert.deepEqual(warnings[1].reasons, ["mid-sentence-capitalized"]);
+  assert.deepEqual(transcript.findConfidenceWarnings([{ text: "400", confidence: 0.1 }], "deepgram", 0.75), []);
+});
+
 test("reflow balancea captions sin superar palabras por línea ni líneas", () => {
   const words = Array.from({ length: 13 }, (_, index) => ({
     text: `p${index + 1}`,
@@ -309,6 +323,25 @@ test("el límite visual de una línea prevalece sobre la cantidad de palabras", 
     assert.ok(transcript.tokenize(caption.text).length <= 6);
   });
   assert.equal(transcript.suggestedMaxCharsPerLine(1920, 1080), 42);
+});
+
+test("calibra límites conservadores para 4:3, cuadrado y vertical", () => {
+  assert.equal(transcript.suggestedMaxCharsPerLine(720, 576), 34);
+  assert.equal(transcript.suggestedMaxCharsPerLine(1080, 1080), 30);
+  assert.equal(transcript.suggestedMaxCharsPerLine(1080, 1350), 28);
+  assert.equal(transcript.suggestedMaxCharsPerLine(1080, 1920), 28);
+
+  const words = transcript.distributeText(
+    "una frase deliberadamente extensa para comprobar el ajuste predeterminado",
+    0, 4, 1
+  );
+  const captions = transcript.captionize(words, {
+    wordsPerLine: 10,
+    lines: 1,
+    maxCharsPerLine: transcript.suggestedMaxCharsPerLine(720, 576)
+  });
+  assert.ok(captions.length > 1);
+  captions.forEach((caption) => assert.ok(caption.text.length <= 34));
 });
 
 test("reflow desde SRT conserva el rango del corte y respeta una sola línea", () => {

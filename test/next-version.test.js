@@ -17,7 +17,7 @@ test("la próxima versión usa la leyenda solicitada sin encabezado interno", ()
   assert.doesNotMatch(panel, /<h1>/);
   assert.doesNotMatch(panel, /class="panel-header"/);
   assert.match(panel, /Esta extensión fue hecha por Nico Russo, con mucho amor\./);
-  assert.match(manifest, /ExtensionBundleVersion="0\.6\.2"/);
+  assert.match(manifest, /ExtensionBundleVersion="0\.6\.4"/);
 });
 
 test("los cuatro proveedores activan diarización", () => {
