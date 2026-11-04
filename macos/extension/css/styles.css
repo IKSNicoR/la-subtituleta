@@ -349,6 +349,40 @@ progress::-webkit-progress-value {
   margin: 3px auto 8px;
 }
 
+.support-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.support-block strong {
+  color: #fff;
+  font-size: 12px;
+}
+
+.support-button {
+  min-height: 34px;
+  padding: 8px 20px;
+  border: 1px solid #fff;
+  border-radius: 2px;
+  background: #fff;
+  color: #111;
+  font-size: 11px;
+  text-align: center;
+}
+
+.support-button:hover,
+.support-button:focus {
+  border-color: #d7d7d7;
+  background: #d7d7d7;
+  color: #111;
+  text-decoration: none;
+}
+
 .api-key-link:hover,
 .api-key-link:focus {
   color: #7fe7ed;

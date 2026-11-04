@@ -9,8 +9,9 @@ Extensión gratuita para Adobe Premiere Pro que transcribe la secuencia activa c
 
 Premiere Pro 2024 o posterior. La versión para macOS continúa validándose en Macs reales, tanto Intel como Apple Silicon.
 
-## Novedades de la versión 0.6.4
+## Novedades de la versión 0.6.5
 
+- La pantalla de Configuración suma un acceso opcional a Cafecito para apoyar el desarrollo de LS.
 - Los speakers ya no quedan arrastrados entre transcripciones: se pueden quitar y el formulario vuelve a una fila vacía después de cada trabajo.
 - AssemblyAI decide la cantidad real de voces y conserva su nivel de confianza en el JSON.
 - Las cifras y palabras dudosas de AssemblyAI quedan marcadas en el JSON para revisión, sin modificar el SRT.

@@ -1,4 +1,4 @@
-LA SUBTITULETA — macOS v0.6.4
+LA SUBTITULETA — macOS v0.6.5
 
 Compatible con Premiere Pro 2024 o posterior. Anotá tu versión exacta
 de Premiere y macOS, y si tu Mac es Apple Silicon (M1/M2/M3/...) o Intel.

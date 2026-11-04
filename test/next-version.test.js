@@ -17,7 +17,7 @@ test("la próxima versión usa la leyenda solicitada sin encabezado interno", ()
   assert.doesNotMatch(panel, /<h1>/);
   assert.doesNotMatch(panel, /class="panel-header"/);
   assert.match(panel, /Esta extensión fue hecha por Nico Russo, con mucho amor\./);
-  assert.match(manifest, /ExtensionBundleVersion="0\.6\.4"/);
+  assert.match(manifest, /ExtensionBundleVersion="0\.6\.5"/);
 });
 
 test("los cuatro proveedores activan diarización", () => {
@@ -198,4 +198,12 @@ test("Configuración compacta los enlaces y muestra la versión real del product
   assert.match(panel, /<span>de NicoRusso<\/span>/);
   assert.match(panel, /id="extension-version"/);
   assert.match(main, /byId\("extension-version"\)\.textContent = EXTENSION_VERSION/);
+});
+
+test("Configuración permite apoyar el desarrollo con Cafecito", () => {
+  assert.match(panel, /<strong>¿Te sirve La Subtituleta\?<\/strong>/);
+  assert.match(panel, />INVITAME UN CAFECITO<\/button>/);
+  assert.match(panel, /Ayudame a seguir desarrollándola\./);
+  assert.match(panel, /data-api-url="https:\/\/cafecito\.app\/nicorusso"/);
+  assert.match(panel, /class="api-key-link support-button"/);
 });
